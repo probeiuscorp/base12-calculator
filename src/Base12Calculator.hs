@@ -3,7 +3,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Example.Project where
+module Base12Calculator where
 
 import Clash.Prelude
 
