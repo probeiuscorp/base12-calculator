@@ -23,32 +23,44 @@ topEntity ::
   Clock Dom50 ->
   Reset Dom50 ->
   Enable Dom50 ->
-  Signal Dom50 (Unsigned 8) ->
-  Signal Dom50 (Unsigned 8)
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 (Unsigned 4) ->
+  (Signal Dom50 (Unsigned 7),
+  Signal Dom50 (Unsigned 16),
+  Signal Dom50 (Unsigned 4),
+  Signal Dom50 (Unsigned 4))
 topEntity = exposeClockResetEnable accum
 
 -- To specify the names of the ports of our top entity, we create a @Synthesize@ annotation.
 {-# ANN topEntity
   (Synthesize
-    { t_name = "accum"
-    , t_inputs = [ PortName "CLK"
-                 , PortName "RST"
-                 , PortName "EN"
-                 , PortName "DIN"
+    { t_name = "top"
+    , t_inputs = [ PortName "clk"
+                 , PortName "rst"
+                 , PortName "en"
+                 , PortName "sw"
+                 , PortName "btnL"
+                 , PortName "btnC"
+                 , PortName "btnR"
+                 , PortName "btnU"
+                 , PortName "btnD"
+                 , PortName "row"
                  ]
-    , t_output = PortName "DOUT"
+    , t_output = PortProduct ""
+      [ PortName "oled"
+      , PortName "led"
+      , PortName "an"
+      , PortName "col"
+      ]
     }) #-}
 
 -- Make sure GHC does not apply any optimizations to the boundaries of the design.
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
--- | A simple accumulator that works on unsigned numbers of any size.
--- It has hidden clock, reset, and enable signals.
-accum ::
-  (HiddenClockResetEnable dom, KnownNat n) =>
-  Signal dom (Unsigned n) ->
-  Signal dom (Unsigned n)
-accum = mealy accumT 0
- where
-  accumT s i = (s + i, s)
+accum sw btnL btnC btnR btnU btnD row = (pure 0, pure 7, pure 0, pure 0)
