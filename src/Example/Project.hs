@@ -1,6 +1,7 @@
 -- @createDomain@ below generates a warning about orphan instances, but we like
 -- our code to be warning-free.
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
 
 module Example.Project where
 
@@ -40,17 +41,18 @@ topEntity = exposeClockResetEnable accum
 {-# ANN topEntity
   (Synthesize
     { t_name = "top"
-    , t_inputs = [ PortName "clk"
-                 , PortName "rst"
-                 , PortName "en"
-                 , PortName "sw"
-                 , PortName "btnL"
-                 , PortName "btnC"
-                 , PortName "btnR"
-                 , PortName "btnU"
-                 , PortName "btnD"
-                 , PortName "row"
-                 ]
+    , t_inputs =
+      [ PortName "clk"
+      , PortName "rst"
+      , PortName "en"
+      , PortName "sw"
+      , PortName "btnL"
+      , PortName "btnC"
+      , PortName "btnR"
+      , PortName "btnU"
+      , PortName "btnD"
+      , PortName "row"
+      ]
     , t_output = PortProduct ""
       [ PortName "oled"
       , PortName "led"
@@ -63,4 +65,26 @@ topEntity = exposeClockResetEnable accum
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
-accum sw btnL btnC btnR btnU btnD row = (pure 0, pure 7, pure 0, pure 0)
+accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
+  where
+    led = counter $ debounce btnU 
+
+counter = flip mealy 0 $ \cases
+  n 1 -> (n + 1, n + 1)
+  n 0 -> (n, n)
+
+data DebounceState = Wait | Pressing (Unsigned 8) | Releasing (Unsigned 8)
+  deriving (Eq, Ord, Show, Generic, NFDataX)
+debounceMachine :: DebounceState -> Bit -> (DebounceState, Bit)
+debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
+  Wait 0 -> ok Wait
+  Wait 1 -> ok $ Pressing alarmTime
+  (Pressing _) 0 -> ok Wait
+  (Pressing n) 1 -> if n == 0
+    then (Releasing alarmTime, 1)
+    else ok $ Pressing $ n - 1
+  s@(Releasing _) 1 -> ok s
+  (Releasing n) 0 -> ok $ if n == 0
+    then Wait
+    else Releasing $ n - 1
+debounce = mealy debounceMachine Wait
