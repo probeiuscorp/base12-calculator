@@ -1,0 +1,12 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:base12-calculator"
+    - path: "./tests/doctests.hs"
+      component: "base12-calculator:doctests"
+    - path: "./tests"
+      component: "base12-calculator:test-library"
+    - path: "./bin/Clashi.hs"
+      component: "base12-calculator:exe:clashi"
+    - path: "./bin/Clash.hs"
+      component: "base12-calculator:exe:clash"
