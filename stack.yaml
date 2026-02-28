@@ -1,5 +1,6 @@
-resolver:
-  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/44.yaml
+resolver: lts-23.28
+# resolver:
+#   url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/44.yaml
 
 extra-deps:
 - clash-ghc-1.8.4@sha256:3f758c59c6024fc8f625e38cf866a4ea5981a38a8f8bfb3288d2123457730049,9866

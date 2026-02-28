@@ -2,10 +2,15 @@
 -- our code to be warning-free.
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Base12Calculator where
 
 import Clash.Prelude
+
+(##) :: Functor f => f a -> (a -> b)-> f b
+fa ## f = f <$> fa
+infixr 2 ##
 
 -- Create a domain with the frequency of your input clock. For this example we used
 -- 50 MHz.
@@ -65,9 +70,18 @@ topEntity = exposeClockResetEnable accum
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
+inlineMealy initialState bIn transfer = mealy transfer initialState bIn
 accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
   where
-    led = counter $ debounce btnU 
+    btnPush = debounce btnU
+    btnPop = debounce btnD
+    bWIPValue = pure $ (0, 0)
+    led = bTop
+    bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
+      (1, 0, value) -> StackPush value
+      (0, 1, _) -> StackPop
+      _ -> StackAck
+    (bTop, bStackResult) = unbundle $ stack bStateAction
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)
@@ -88,3 +102,23 @@ debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
     then Wait
     else Releasing $ n - 1
 debounce = mealy debounceMachine Wait
+
+type CalcValue = (Signed 12, Unsigned 12)
+data StackAction = StackPush CalcValue | StackPop | StackAck
+  deriving (Eq, Ord, Show, Generic)
+data StackResult = StackIdle | StackYield CalcValue | StackOverUnderflow Bool
+  deriving (Eq, Ord, Show, Generic, NFDataX)
+data StackState = StackState
+  { stackTop :: Unsigned 16
+  , stackItems :: Vec 16 CalcValue
+  } deriving (Eq, Ord, Show, Generic, NFDataX)
+stackMachine :: StackState -> StackAction -> (StackState, (Unsigned 16, StackResult))
+stackMachine state@(StackState top items) = let ok (transferred@(StackState top _), result) = (transferred, (top, result)) in ok . \case
+  StackPush value -> if top == 16
+    then (state, StackOverUnderflow True)
+    else (StackState (top + 1) (replace top value items), StackIdle)
+  StackPop -> if top == 0
+    then (state, StackOverUnderflow False)
+    else let i = top - 1 in (StackState i items, StackYield $ items !! i)
+  StackAck -> (state, StackIdle)
+stack = mealy stackMachine $ StackState 0 $ repeat (0, 0)

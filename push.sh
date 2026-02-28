@@ -1,4 +1,3 @@
-set -e
 cp verilog/*/*.v enlab-build-env/src
 rsync -r enlab-build-env/ enlab:~/hack-usu
 ssh enlab "cd ~/hack-usu; make implement"
