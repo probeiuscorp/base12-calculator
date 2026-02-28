@@ -1,3 +1,5 @@
+enlab-build-env/src/*
+
 dist/
 dist-newstyle/
 .stack-work/
