@@ -7,14 +7,17 @@
 module Base12Calculator where
 
 import Clash.Prelude
+import Control.Monad
+import qualified Clash.Sized.Vector as Vec
 
+dupe x = (x, x)
 (##) :: Functor f => f a -> (a -> b)-> f b
 fa ## f = f <$> fa
 infixr 2 ##
 
 -- Create a domain with the frequency of your input clock. For this example we used
 -- 50 MHz.
-createDomain vSystem{vName="Dom50", vPeriod=hzToPeriod 50e6}
+createDomain vSystem{vName="Dom50", vPeriod=hzToPeriod 100e6}
 
 -- | @topEntity@ is Clash@s equivalent of @main@ in other programming languages.
 -- Clash will look for it when compiling "Example.Project" and translate it to
@@ -36,11 +39,12 @@ topEntity ::
   Signal Dom50 Bit ->
   Signal Dom50 Bit ->
   Signal Dom50 (Unsigned 4) ->
+  Vec 4 (BiSignalIn PullUp Dom50 1) ->
   (Signal Dom50 (Unsigned 7),
   Signal Dom50 (Unsigned 16),
   Signal Dom50 (Unsigned 4),
-  Signal Dom50 (Unsigned 4))
-topEntity = exposeClockResetEnable accum
+  Vec 4 (BiSignalOut PullUp Dom50 1))
+topEntity = exposeClockResetEnable calculator
 
 -- To specify the names of the ports of our top entity, we create a @Synthesize@ annotation.
 {-# ANN topEntity
@@ -57,12 +61,23 @@ topEntity = exposeClockResetEnable accum
       , PortName "btnU"
       , PortName "btnD"
       , PortName "row"
+      , PortProduct ""
+        [ PortName "col0"
+        , PortName "col1"
+        , PortName "col2"
+        , PortName "col3"
+        ] 
       ]
     , t_output = PortProduct ""
       [ PortName "oled"
       , PortName "led"
       , PortName "an"
-      , PortName "col"
+      , PortProduct ""
+        [ PortName "col0"
+        , PortName "col1"
+        , PortName "col2"
+        , PortName "col3"
+        ] 
       ]
     }) #-}
 
@@ -71,10 +86,15 @@ topEntity = exposeClockResetEnable accum
 {-# OPAQUE topEntity #-}
 
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
-accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
+calculator sw btnL btnC btnR btnU btnD row colPinsIn = (pure 0, led, pure 0, colPinsOut)
   where
     btnPush = debounce btnU
     btnPop = debounce btnD
+    (bCol, bKeys) = keypad row
+    colPinsOut = Vec.zipWith writeToBiSignal colPinsIn $ sequenceA bCol
+    -- y = keypad
+    -- colPinsOut = keypad `seq` undefined
+    -- colPinsOut = undefined -- Vec.zipWith writeToBiSignal colPinsIn $ pure $ pure $ Nothing -- (sequenceA bCol)
     bWIPValue = pure $ (0, 0)
     led = bTop
     bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
@@ -102,6 +122,22 @@ debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
     then Wait
     else Releasing $ n - 1
 debounce = mealy debounceMachine Wait
+
+keypad :: (KnownDomain dom, HiddenClockResetEnable dom)
+  => Signal dom (Unsigned 4) -> (Signal dom (Vec 4 (Maybe Bit)), Signal dom (Unsigned 16))
+keypad bRows = (bCol, bKeys)
+  where
+    bCol = (<$> bIndex) $ \case
+      0 -> Nothing :> Nothing :> Nothing :> Just 0 :> Nil
+      1 -> Nothing :> Nothing :> Just 0 :> Nothing :> Nil
+      2 -> Nothing :> Just 0 :> Nothing :> Nothing :> Nil
+      3 -> Just 0 :> Nothing :> Nothing :> Nothing :> Nil
+    (bIndex, bKeys) = unbundle $ inlineMealy initialState bRows $ \(i, keys) row ->
+      let
+        offset = 12 - 4 * i
+        nextKeys = (keys .&. complement (0b1111 .>>. fromIntegral offset)) .|. (resize row .>>. fromIntegral offset)
+      in dupe (i + 1, nextKeys)
+    initialState = (0 :: Unsigned 2, 0 :: Unsigned 16)
 
 type CalcValue = (Signed 12, Unsigned 12)
 data StackAction = StackPush CalcValue | StackPop | StackAck
