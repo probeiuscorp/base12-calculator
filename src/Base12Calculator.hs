@@ -7,10 +7,7 @@
 module Base12Calculator where
 
 import Clash.Prelude
-
-(##) :: Functor f => f a -> (a -> b)-> f b
-fa ## f = f <$> fa
-infixr 2 ##
+import Calculator.Prelude
 
 -- Create a domain with the frequency of your input clock. For this example we used
 -- 50 MHz.
@@ -70,7 +67,6 @@ topEntity = exposeClockResetEnable accum
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
-inlineMealy initialState bIn transfer = mealy transfer initialState bIn
 accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
   where
     btnPush = debounce btnU
