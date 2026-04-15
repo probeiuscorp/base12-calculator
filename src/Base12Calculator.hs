@@ -7,6 +7,7 @@
 module Base12Calculator where
 
 import Clash.Prelude
+import Clash.Explicit.Signal (unsafeSynchronizer)
 import Control.Monad
 import qualified Clash.Sized.Vector as Vec
 
@@ -18,6 +19,7 @@ infixr 2 ##
 -- Create a domain with the frequency of your input clock. For this example we used
 -- 50 MHz.
 createDomain vSystem{vName="Dom50", vPeriod=hzToPeriod 100e6}
+createDomain vSystem{vName="KeypadClock", vPeriod=hzToPeriod 30}
 
 -- | @topEntity@ is Clash@s equivalent of @main@ in other programming languages.
 -- Clash will look for it when compiling "Example.Project" and translate it to
@@ -86,17 +88,40 @@ topEntity = exposeClockResetEnable calculator
 {-# OPAQUE topEntity #-}
 
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
+calculator :: HiddenClockResetEnable Dom50 =>
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 Bit ->
+  Signal Dom50 (Unsigned 4) ->
+  Vec 4 (BiSignalIn PullUp Dom50 1) ->
+  (Signal Dom50 (Unsigned 7),
+  Signal Dom50 (Unsigned 16),
+  Signal Dom50 (Unsigned 4),
+  Vec 4 (BiSignalOut PullUp Dom50 1))
 calculator sw btnL btnC btnR btnU btnD row colPinsIn = (pure 0, led, pure 0, colPinsOut)
   where
+    btnPush :: Signal Dom50 Bit
     btnPush = debounce btnU
+    btnPop :: Signal Dom50 Bit
     btnPop = debounce btnD
-    (bCol, bKeys) = keypad row
+    clkA :: Clock Dom50 
+    clkA = clockGen
+    clkB :: Clock KeypadClock
+    clkB = clockGen
+    thing :: HiddenClockResetEnable KeypadClock => Signal KeypadClock (Unsigned 4)
+    thing = unsafeSynchronizer clkB clkA row
+    keypadresult :: HiddenClockResetEnable KeypadClock => Signal KeypadClock (Vec 4 (Maybe Bit), Unsigned 16)
+    keypadresult = keypad thing
+    keypadreclocked :: HiddenClockResetEnable Dom50 => Signal Dom50 (Vec 4 (Maybe Bit), Unsigned 16)
+    keypadreclocked = unsafeSynchronizer clkA clkB keypadresult
+    bCol :: Signal Dom50 (Vec 4 (Maybe Bit))
+    (bCol, bKeys) = unbundle keypadreclocked
     colPinsOut = Vec.zipWith writeToBiSignal colPinsIn $ sequenceA bCol
-    -- y = keypad
-    -- colPinsOut = keypad `seq` undefined
-    -- colPinsOut = undefined -- Vec.zipWith writeToBiSignal colPinsIn $ pure $ pure $ Nothing -- (sequenceA bCol)
-    bWIPValue = pure $ (0, 0)
-    led = bTop
+    bWIPValue = pure $ (0, 1)
+    led = bKeys
     bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
       (1, 0, value) -> StackPush value
       (0, 1, _) -> StackPop
@@ -123,20 +148,22 @@ debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
     else Releasing $ n - 1
 debounce = mealy debounceMachine Wait
 
-keypad :: (KnownDomain dom, HiddenClockResetEnable dom)
-  => Signal dom (Unsigned 4) -> (Signal dom (Vec 4 (Maybe Bit)), Signal dom (Unsigned 16))
-keypad bRows = (bCol, bKeys)
+keypad :: HiddenClockResetEnable KeypadClock => Signal KeypadClock (Unsigned 4) -> Signal KeypadClock ((Vec 4 (Maybe Bit), Unsigned 16))
+keypad bRows = result
   where
-    bCol = (<$> bIndex) $ \case
-      0 -> Nothing :> Nothing :> Nothing :> Just 0 :> Nil
-      1 -> Nothing :> Nothing :> Just 0 :> Nothing :> Nil
-      2 -> Nothing :> Just 0 :> Nothing :> Nothing :> Nil
-      3 -> Just 0 :> Nothing :> Nothing :> Nothing :> Nil
-    (bIndex, bKeys) = unbundle $ inlineMealy initialState bRows $ \(i, keys) row ->
+    fn :: Unsigned 2 -> (Unsigned 16 -> Unsigned 16, Vec 4 (Maybe Bit))
+    fn = \case
+      0 -> ((.<<. 12), Nothing :> Nothing :> Nothing :> Just 0 :> Nil)
+      1 -> ((.<<. 8), Nothing :> Nothing :> Just 0 :> Nothing :> Nil)
+      2 -> ((.<<. 4), Nothing :> Just 0 :> Nothing :> Nothing :> Nil)
+      3 -> (id, Just 0 :> Nothing :> Nothing :> Nothing :> Nil)
+    result = inlineMealy initialState bRows $ \(i, keys) row ->
       let
         offset = 12 - 4 * i
-        nextKeys = (keys .&. complement (0b1111 .>>. fromIntegral offset)) .|. (resize row .>>. fromIntegral offset)
-      in dupe (i + 1, nextKeys)
+        (applyShift, thing) = fn i
+        iNext = i + 1
+        nextKeys = (keys .&. complement (applyShift 0b1111)) .|. applyShift (resize row)
+      in ((iNext, nextKeys), (thing, nextKeys))
     initialState = (0 :: Unsigned 2, 0 :: Unsigned 16)
 
 type CalcValue = (Signed 12, Unsigned 12)
