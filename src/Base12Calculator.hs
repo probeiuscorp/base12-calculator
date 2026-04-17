@@ -8,6 +8,7 @@ module Base12Calculator where
 
 import Clash.Prelude
 import Calculator.Prelude
+import OLED (oled)
 
 topEntity ::
   Clock DomMain ->
@@ -54,7 +55,7 @@ topEntity = exposeClockResetEnable accum
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
-accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
+accum sw btnL btnC btnR btnU btnD row = (bOledData, led, pure 0, pure 0)
   where
     btnPush = debounce btnU
     btnPop = debounce btnD
@@ -65,6 +66,7 @@ accum sw btnL btnC btnR btnU btnD row = (pure 0, led, pure 0, pure 0)
       (0, 1, _) -> StackPop
       _ -> StackAck
     (bTop, bStackResult) = unbundle $ stack bStateAction
+    bOledData = oled (pure 0) $ pure (0, 0)
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)
@@ -86,7 +88,6 @@ debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
     else Releasing $ n - 1
 debounce = mealy debounceMachine Wait
 
-type CalcValue = (Signed 12, Unsigned 12)
 data StackAction = StackPush CalcValue | StackPop | StackAck
   deriving (Eq, Ord, Show, Generic)
 data StackResult = StackIdle | StackYield CalcValue | StackOverUnderflow Bool

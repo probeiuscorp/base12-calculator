@@ -1,0 +1,40 @@
+- BlackBox:
+    name: OLED.oledDriver
+    kind: Declaration
+    type: |
+      oledDriver
+        :: KnownDomain dom
+        => Clock dom
+        -> Reset dom
+        -> Signal dom Bit
+        -> Signal dom Bit
+        -> Signal dom (Unsigned 8)
+        -> Signal dom (Unsigned 2)
+        -> Signal dom (Unsigned 3)
+        -> Signal dom (Unsigned 7)
+    template: |
+      // oledDriver begin
+      wire [6:0] output;
+      wire ready;
+      assign ~RESULT = output;
+      oledDriver ~GENSYM[oled_driver][1] (
+        .clk(~ARG[0]),
+        .rst_n(~ARG[1]),
+        .showchar(~ARG[2]),
+        .showbmp(1'b0),
+        .clear(~ARG[3]),
+        .charval(~ARG[4]),
+        .char_row(~ARG[5]),
+        .char_col(~ARG[6]),
+        .bmp(2'b0),
+        .ready(ready),
+        // OLED header signals:
+        .cs_n(output[0]),
+        .sdo(output[1]),
+        .sclk(output[2]),
+        .dc(output[3]),
+        .vbat(output[5]),
+        .vdd(output[6]),
+        .res(output[4])
+      );
+      // oledDriver end
