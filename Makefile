@@ -1,5 +1,5 @@
 main: FORCE
-	stack run clash -- Base12Calculator --vhdl
+	stack run clash -- Base12Calculator --verilog
 
 .PHONY: FORCE
 FORCE:

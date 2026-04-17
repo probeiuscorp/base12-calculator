@@ -10,20 +10,20 @@ import Clash.Prelude
 import Calculator.Prelude
 
 topEntity ::
-  Clock System ->
-  Reset System ->
-  Enable System ->
-  Signal System Bit ->
-  Signal System Bit ->
-  Signal System Bit ->
-  Signal System Bit ->
-  Signal System Bit ->
-  Signal System Bit ->
-  Signal System (Unsigned 4) ->
-  (Signal System (Unsigned 7),
-  Signal System (Unsigned 16),
-  Signal System (Unsigned 4),
-  Signal System (Unsigned 4))
+  Clock DomMain ->
+  Reset DomMain ->
+  Enable DomMain ->
+  Signal DomMain Bit ->
+  Signal DomMain Bit ->
+  Signal DomMain Bit ->
+  Signal DomMain Bit ->
+  Signal DomMain Bit ->
+  Signal DomMain Bit ->
+  Signal DomMain (Unsigned 4) ->
+  (Signal DomMain (Unsigned 7),
+  Signal DomMain (Unsigned 16),
+  Signal DomMain (Unsigned 4),
+  Signal DomMain (Unsigned 4))
 topEntity = exposeClockResetEnable accum
 
 -- To specify the names of the ports of our top entity, we create a @Synthesize@ annotation.
