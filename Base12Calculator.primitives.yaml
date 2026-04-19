@@ -1,7 +1,7 @@
 - BlackBox:
     name: OLED.oledDriver
     kind: Declaration
-    type: |
+    type: |-
       oledDriver
         :: KnownDomain dom
         => Clock dom
@@ -10,12 +10,13 @@
         -> Signal dom Bit
         -> Signal dom (Unsigned 8)
         -> Signal dom (Unsigned 2)
-        -> Signal dom (Unsigned 3)
-        -> Signal dom (Unsigned 7)
-    template: |
+        -> Signal dom (Unsigned 4)
+        -> Signal dom (Unsigned 8)
+    template: |-
       // oledDriver begin
-      wire [6:0] output;
+      wire [7:0] output;
       wire ready;
+      assign output[7] = ready;
       assign ~RESULT = output;
       oledDriver ~GENSYM[oled_driver][1] (
         .clk(~ARG[0]),

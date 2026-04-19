@@ -59,14 +59,14 @@ accum sw btnL btnC btnR btnU btnD row = (bOledData, led, pure 0, pure 0)
   where
     btnPush = debounce btnU
     btnPop = debounce btnD
-    bWIPValue = pure $ (0, 0)
+    bWIPValue = pure calcValueZero
     led = bTop
     bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
       (1, 0, value) -> StackPush value
       (0, 1, _) -> StackPop
       _ -> StackAck
     (bTop, bStackResult) = unbundle $ stack bStateAction
-    bOledData = oled (pure 0) $ pure (0, 0)
+    bOledData = oled $ pure $ Just $ CalcValue False 20 30
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)
@@ -105,4 +105,4 @@ stackMachine state@(StackState top items) = let ok (transferred@(StackState top 
     then (state, StackOverUnderflow False)
     else let i = top - 1 in (StackState i items, StackYield $ items !! i)
   StackAck -> (state, StackIdle)
-stack = mealy stackMachine $ StackState 0 $ repeat (0, 0)
+stack = mealy stackMachine $ StackState 0 $ repeat calcValueZero
