@@ -4,8 +4,8 @@ import Clash.Prelude
 
 type NCalcValueBits = 32
 -- ceil (CalcValueBits / 3), add 2 to accommodate that Div here rounds down not up
-type NBCDDigits = 11 -- Div (NCalcValueBits + 3 - 1) 3
-type NBCDBits = 44 -- NBCDDigits * 4
+type NBCDDigits = Div (NCalcValueBits + 3 - 1) 3
+type NBCDBits = NBCDDigits * 4
 data CalcValue = CalcValue
   { valIsNegative :: Bool
   , valNumerator :: Unsigned NCalcValueBits

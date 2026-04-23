@@ -3,8 +3,7 @@
     kind: Declaration
     type: |-
       oledDriver
-        :: KnownDomain dom
-        => Clock dom
+        :: Clock dom
         -> Reset dom
         -> Signal dom Bit
         -> Signal dom Bit
@@ -14,11 +13,9 @@
         -> Signal dom (Unsigned 8)
     template: |-
       // oledDriver begin
-      wire [7:0] output;
-      wire ready;
-      assign output[7] = ready;
-      assign ~RESULT = output;
-      oledDriver ~GENSYM[oled_driver][1] (
+      wire ~GENSYM[ready][1], ~GENSYM[cs_n][2], ~GENSYM[sdo][3], ~GENSYM[sclk][4];
+      wire ~GENSYM[dc][5], ~GENSYM[vbat][6], ~GENSYM[vdd][7], ~GENSYM[res][8];
+      oledDriver ~GENSYM[oled_driver][0] (
         .clk(~ARG[0]),
         .rst_n(~ARG[1]),
         .showchar(~ARG[2]),
@@ -28,14 +25,15 @@
         .char_row(~ARG[5]),
         .char_col(~ARG[6]),
         .bmp(2'b0),
-        .ready(ready),
+        .ready(~SYM[1]),
         // OLED header signals:
-        .cs_n(output[0]),
-        .sdo(output[1]),
-        .sclk(output[2]),
-        .dc(output[3]),
-        .vbat(output[5]),
-        .vdd(output[6]),
-        .res(output[4])
+        .cs_n(~SYM[2]),
+        .sdo(~SYM[3]),
+        .sclk(~SYM[4]),
+        .dc(~SYM[5]),
+        .vbat(~SYM[6]),
+        .vdd(~SYM[7]),
+        .res(~SYM[8])
       );
+      assign ~RESULT[7:0] = {~SYM[1], ~SYM[7], ~SYM[6], ~SYM[8], ~SYM[5], ~SYM[4], ~SYM[3], ~SYM[2]};
       // oledDriver end

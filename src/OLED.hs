@@ -8,8 +8,7 @@ import Data.Bifunctor (Bifunctor(bimap))
 {-# OPAQUE oledDriver #-}
 {-# ANN oledDriver hasBlackBox #-}
 oledDriver
-  :: KnownDomain dom
-  => Clock dom
+  :: Clock dom
   -> Reset dom
   -> Signal dom Bit  -- ^ Show char
   -> Signal dom Bit  -- ^ Clear display
@@ -17,7 +16,7 @@ oledDriver
   -> Signal dom (Unsigned 2)  -- ^ Row index
   -> Signal dom (Unsigned 4)  -- ^ Column index
   -> Signal dom (Unsigned 8)  -- ^ OLED pins out
-oledDriver !_ !_ !_ !_ !_ !_ !_ = undefined
+oledDriver !_ !_ !_ !_ !_ !_ !_ = pure 0
 
 oled
   :: HiddenClockResetEnable DomMain
@@ -25,11 +24,15 @@ oled
   -> Signal DomMain (Unsigned 7)
 oled bmData = bOLEDPinsOut
   where
-    bOLEDResult = mealy transfer OLEDState
-      { mHeldValue = Nothing
-      , isWorkingOnNumerator = True
-      , step = Collect
-      } $ bundle (bmData, bEnabled)
+    bOLEDResult :: Signal DomMain OLEDResult
+    bOLEDResult = moore const (const defaultResult) () (pure ())
+    -- bOLEDResult = mealy transfer OLEDState
+    --   { mHeldValue = Nothing
+    --   , isWorkingOnNumerator = True
+    --   , step = Collect
+    --   } $ bundle (bmData, bEnabled)
+    bEnabled :: Signal DomMain Bool
+    bOLEDPinsOut :: Signal DomMain (Unsigned 7)
     (bEnabled, bOLEDPinsOut) = unbundle $ bimap unpack unpack . split . pack <$> driver
       (showChar <$> bOLEDResult) (clearDisplay <$> bOLEDResult)
       (charValue <$> bOLEDResult) (rowIndex <$> bOLEDResult) (colIndex <$> bOLEDResult)
