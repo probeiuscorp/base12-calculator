@@ -126,7 +126,8 @@ test-suite test-library
   ghc-options: -threaded
   main-is: unittests.hs
   other-modules:
-    Tests.Example.Project
+    SnapshotTesting
+    Tests.Calculator.TestSnapshots
   build-depends:
     base12-calculator,
     QuickCheck,
@@ -134,4 +135,7 @@ test-suite test-library
     hedgehog,
     tasty >= 1.2 && < 1.6,
     tasty-hedgehog,
-    tasty-th
+    tasty-th,
+    tasty-golden,
+    bytestring,
+    filepath
