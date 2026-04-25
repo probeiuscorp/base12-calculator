@@ -10,5 +10,5 @@ tests :: TestTree
 tests = snapshot "testing setup" "snapshots" 10
   [ col "ones" (pure 1 :: C.Signal C.System (C.Unsigned 8))
   , col "twos" (pure 2 :: C.Signal C.System (C.Unsigned 6))
-  , col "threes" (pure 3 :: C.Signal C.System (C.Unsigned 4))
+  , col "threes" (pure 3 :: C.Signal C.System (C.Unsigned 2))
   ]

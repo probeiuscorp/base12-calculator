@@ -22,6 +22,9 @@ withUnPacking f a = pack $ f $ unpack a
 
 createDomain vSystem{vName="DomMain", vResetPolarity=ActiveLow}
 
+withGenClockResetEnable :: KnownDomain dom => (HiddenClockResetEnable dom => r) -> r
+withGenClockResetEnable s = exposeClockResetEnable s clockGen resetGen enableGen
+
 (##) :: Functor f => f a -> (a -> b)-> f b
 fa ## f = f <$> fa
 infixr 2 ##

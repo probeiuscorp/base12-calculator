@@ -4,7 +4,8 @@
 module SnapshotTesting (snapshot, col) where
 
 import Prelude
-import Data.List (transpose, intercalate)
+import Calculator.Prelude
+import Data.List (transpose, intercalate, dropWhileEnd)
 import System.FilePath
 import Test.Tasty
 import Test.Tasty.Golden
@@ -25,22 +26,38 @@ instance SnapshotPrintable String where
 instance C.BitPack a => SnapshotPrintable a where
   snapshotPrint = show . C.pack
 
-type ColsData = [(String, Int -> [String])]
-col :: C.KnownDomain dom => SnapshotPrintable a => String -> C.Signal dom a -> (String, Int -> [String])
-col title bData = (title, flip C.sampleN $ snapshotPrint <$> bData)
+type ColData dom = (String, C.Signal dom String)
+col
+  :: (C.KnownDomain dom, SnapshotPrintable a)
+  => String
+  -> (C.HiddenClockResetEnable dom => C.Signal dom a)
+  -> (C.HiddenClockResetEnable dom => ColData dom)
+col title bData = (title, snapshotPrint <$> bData)
 takeSnapshot
-  :: Int
-  -> ColsData
+  :: forall dom. C.KnownDomain dom
+  => Int
+  -> (C.HiddenClockResetEnable dom => [ColData dom])
   -> String
-takeSnapshot nCycles givenColsData = unlines $ map (intercalate "   ") (headers : rows)
+takeSnapshot nGivenCycles givenColsData = unlines styledLines
   where
+    colsData :: C.HiddenClockResetEnable dom => [ColData dom]
+    colsData = ("clk", bClkCount) : givenColsData
+    dataRows = C.sampleN nCycles $ traverse snd colsData
+    -- TODO: this withGenClockResetEnable should not be necessary.
+    -- The data (just the column titles) used here does not depend on clock, reset, or enable
+    headers = fst <$> withGenClockResetEnable colsData
+    -- TODO: I can't figure out how to get the clock to go 0 -> 1 -> ... instead of 0 -> 0 -> 1 -> ...
+    -- This bandaid is to just drop the first clock cycle
+    nCycles = nGivenCycles + 1
+    rows = headers : drop 1 dataRows
+    styledLines = dropWhileEnd (== ' ') . intercalate "   " . zipWith rightPad colsSize <$> rows
+    colsSize = foldr (max . length) 0 <$> transpose rows
+
+    nats = C.register (0 :: Int) $ nats + 1
     ceiledLog10 = (+1) . floor . logBase (10 :: Double) .  fromIntegral
-    clkCycles = leftPad (max (length "clk") $ ceiledLog10 nCycles) . show <$> take nCycles ([0..] :: [Integer])
-    colsData = ("clk", const clkCycles) : givenColsData
-    colsString = ($ nCycles) . snd <$> colsData
-    colsSize = foldr (max . length) 0 <$> colsString
-    headers = zipWith rightPad colsSize $ fst <$> colsData
-    rows = transpose colsString
+    bClkCount :: C.HiddenClockResetEnable dom => C.Signal dom String
+    bClkCount = leftPad (max (length "clk") $ ceiledLog10 nCycles) . show <$> nats
+
     pad
       :: ((String -> String -> String)
        -> (String -> String -> String))
@@ -50,10 +67,11 @@ takeSnapshot nCycles givenColsData = unlines $ map (intercalate "   ") (headers 
     leftPad = pad flip
 
 snapshot
-  :: String  -- ^ path name
+  :: C.KnownDomain dom
+  => String  -- ^ path name
   -> String  -- ^ test name
   -> Int
-  -> ColsData
+  -> (C.HiddenClockResetEnable dom => [ColData dom])
   -> TestTree
 snapshot pathName testName nCycles bData = goldenVsString name (".snapshots" </> name) $ pure . fromString $ takeSnapshot nCycles bData
   where
