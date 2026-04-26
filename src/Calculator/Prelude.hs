@@ -33,3 +33,18 @@ infixr 2 ##
 infixr 6 $:
 
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
+testTransfer
+  :: (s -> i -> (s, o))
+  -> (s -> i -> (s, (s, o)))
+testTransfer transfer s i = let (s', o) = transfer s i in (s', (s', o))
+testMealy
+  :: (HiddenClockResetEnable dom, NFDataX s)
+  => (s -> i -> (s, o))
+  -> s
+  -> Signal dom i
+  -> Signal dom (s, o)
+testMealy = mealy . testTransfer
+unTestMealy
+  :: Signal dom (s, o)
+  -> Signal dom o
+unTestMealy = fmap snd

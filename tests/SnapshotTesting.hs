@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module SnapshotTesting (snapshot, col) where
+module SnapshotTesting (snapshot, col, raw) where
 
 import Prelude
 import Calculator.Prelude
@@ -21,8 +21,6 @@ class SnapshotPrintable a where
 
 instance SnapshotPrintable LBS.ByteString where
   snapshotPrint = unpack
-instance SnapshotPrintable String where
-  snapshotPrint = id
 instance C.BitPack a => SnapshotPrintable a where
   snapshotPrint = show . C.pack
 
@@ -33,6 +31,9 @@ col
   -> (C.HiddenClockResetEnable dom => C.Signal dom a)
   -> (C.HiddenClockResetEnable dom => ColData dom)
 col title bData = (title, snapshotPrint <$> bData)
+raw :: C.KnownDomain dom => String
+  -> (C.HiddenClockResetEnable dom => C.Signal dom String) -> (C.HiddenClockResetEnable dom => ColData dom)
+raw = (,)
 takeSnapshot
   :: forall dom. C.KnownDomain dom
   => Int

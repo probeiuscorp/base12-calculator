@@ -128,6 +128,7 @@ test-suite test-library
   other-modules:
     SnapshotTesting
     Tests.Calculator.TestSnapshots
+    Tests.Calculator.TestOLED
   build-depends:
     base12-calculator,
     QuickCheck,

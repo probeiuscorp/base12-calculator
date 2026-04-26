@@ -1,4 +1,4 @@
-module OLED where
+module OLED (oled, oledMachine, fanOutOLEDResult, OLEDState(..), OLEDStep(..)) where
 
 import Clash.Prelude hiding (showChar)
 import Calculator.Prelude
@@ -24,19 +24,22 @@ oled
   -> Signal DomMain (Unsigned 7)
 oled bmData = bOLEDPinsOut
   where
-    bOLEDResult :: Signal DomMain OLEDResult
-    bOLEDResult = moore const (const defaultResult) () (pure ())
-    -- bOLEDResult = mealy transfer OLEDState
-    --   { mHeldValue = Nothing
-    --   , isWorkingOnNumerator = True
-    --   , step = Collect
-    --   } $ bundle (bmData, bEnabled)
-    bEnabled :: Signal DomMain Bool
-    bOLEDPinsOut :: Signal DomMain (Unsigned 7)
-    (bEnabled, bOLEDPinsOut) = unbundle $ bimap unpack unpack . split . pack <$> driver
-      (showChar <$> bOLEDResult) (clearDisplay <$> bOLEDResult)
-      (charValue <$> bOLEDResult) (rowIndex <$> bOLEDResult) (colIndex <$> bOLEDResult)
+    bOLEDResult = unTestMealy $ oledMachine bmData bEnabled
+    (bEnabled, bOLEDPinsOut) = unbundle $ bimap unpack unpack . split <$> fanOutOLEDResult bOLEDResult driver
     driver = hideReset $ hideClock oledDriver
+oledMachine
+  :: HiddenClockResetEnable dom
+  => Signal dom (Maybe CalcValue)
+  -> Signal dom Bool
+  -> Signal dom (OLEDState, OLEDResult)
+oledMachine bmCalcValue bEnabled = testMealy transfer OLEDState
+  { mHeldValue = Nothing
+  , isWorkingOnNumerator = True
+  , step = Collect
+  } $ bundle (bmCalcValue, bEnabled)
+fanOutOLEDResult bOLEDResult cont = cont
+  (showChar <$> bOLEDResult) (clearDisplay <$> bOLEDResult)
+  (charValue <$> bOLEDResult) (rowIndex <$> bOLEDResult) (colIndex <$> bOLEDResult)
 
 data OLEDStep = Collect | Clearing | BCD BCDState | Print PrintState
   deriving (Eq, Ord, Show, Generic, NFDataX)
@@ -84,7 +87,8 @@ transfer state (mValue, isReady) = case step state of
 type ScratchSize = NBCDBits + NCalcValueBits
 type ScratchSpace = BitVector ScratchSize
 data BCDStepState = BCDStepState
-  { iBCDStep :: Unsigned (1 + Log2 NCalcValueBits)
+  -- TODO: Using (1 + Log2 NCalcValueBits) here causes so many inlining build errors
+  { iBCDStep :: Unsigned 6
   , bcdScratchSpace :: ScratchSpace
   } deriving (Eq, Ord, Show, Generic, NFDataX)
 data BCDState = BCDState
@@ -135,25 +139,25 @@ transferPrint :: Bool -> OLEDState -> PrintState -> (OLEDState, OLEDResult)
 transferPrint isReady state printState@PrintState{..} = (, result) $ case (waiting, isReady) of
   (False, _) -> state { step = Print printState { waiting = True } }
   (True, False) -> state
-  (True, True) -> let iNext = iPrintCol + 1
-    in if iNext /= 0
-      then state { step = Print printState
-        { iPrintCol = iNext
-        , waiting = False
-        }
+  -- TODO: snatToNum (SNat :: SNat NBCDDigits) doesn't seem to work here
+  (True, True) -> if iPrintCol < 10
+    then state { step = Print printState
+      { iPrintCol = iPrintCol + 1
+      , waiting = False
       }
-      -- done with this row
-      else if isWorkingOnNumerator state
-        -- start work on the denominator
-        then state
-          { isWorkingOnNumerator = False
-          , step = BCD $ initBCD valDenominator printValue
-          }
-        -- we're done!
-        else state
-          { isWorkingOnNumerator = True
-          , step = Collect
-          }
+    }
+    -- done with this row
+    else if isWorkingOnNumerator state
+      -- start work on the denominator
+      then state
+        { isWorkingOnNumerator = False
+        , step = BCD $ initBCD valDenominator printValue
+        }
+      -- we're done!
+      else state
+        { isWorkingOnNumerator = True
+        , step = Collect
+        }
   where
     result :: OLEDResult
     result = defaultResult
