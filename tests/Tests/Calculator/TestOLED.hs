@@ -9,16 +9,21 @@ import Test.Tasty
 import OLED
 
 tests :: TestTree
-tests = snapshot "oled" "test" 128 cols
+tests = let test = snapshot @C.System "oled" in testGroup "oled"
+  -- TODO: rename test to basic
+  [ test "test" 128 $ oledCols $ pure $ Just $ CalcValue False 20 30
+  , test "switching value" 256 $ oledCols $ fromEdges Nothing
+    [ (10, Just $ CalcValue False 20 30)
+    , (138, Just $ CalcValue False 24 155)
+    ]
+  ]
   where
-    bReady = pure True
-    (bOLEDState, bOLEDResult) = C.unbundle $ oledMachine @C.System (pure $ Just $ CalcValue False 20 30) bReady
     showStep :: OLEDStep -> String
     showStep Collect = "ready"
     showStep Clearing = "clear"
     showStep (BCD _) = "bcd"
     showStep (Print _) = "print"
-    cols = fanOutOLEDResult bOLEDResult $ \showChar clearDisplay charValue iy ix ->
+    oledCols bValue = fanOutOLEDResult bOLEDResult $ \showChar clearDisplay charValue iy ix ->
       [ col "ready" bReady
       , raw "state" (showStep . step <$> bOLEDState)
       , col "show char" showChar
@@ -27,3 +32,6 @@ tests = snapshot "oled" "test" 128 cols
       , col "row" iy
       , col "col" ix
       ]
+      where
+        bReady = pure True
+        (bOLEDState, bOLEDResult) = C.unbundle $ oledMachine bValue bReady
