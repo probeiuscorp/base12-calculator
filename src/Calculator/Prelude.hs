@@ -36,7 +36,7 @@ inlineMealy initialState bIn transfer = mealy transfer initialState bIn
 testTransfer
   :: (s -> i -> (s, o))
   -> (s -> i -> (s, (s, o)))
-testTransfer transfer s i = let (s', o) = transfer s i in (s', (s', o))
+testTransfer transfer s i = let (s', o) = transfer s i in (s', (s, o))
 testMealy
   :: (HiddenClockResetEnable dom, NFDataX s)
   => (s -> i -> (s, o))
@@ -48,3 +48,8 @@ unTestMealy
   :: Signal dom (s, o)
   -> Signal dom o
 unTestMealy = fmap snd
+
+i --> f = s
+  where
+    s = register i $ f <$> s
+infix -->

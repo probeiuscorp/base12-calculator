@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module SnapshotTesting (snapshot, col, raw) where
+module SnapshotTesting (snapshot, col, raw, fromEdges) where
 
 import Prelude
 import Calculator.Prelude
@@ -42,7 +42,7 @@ takeSnapshot
 takeSnapshot nCycles givenColsData = unlines styledLines
   where
     colsData :: C.HiddenClockResetEnable dom => [ColData dom]
-    colsData = ("clk", bClkCount) : givenColsData
+    colsData = ("clk", clkCountColumn) : givenColsData
     dataRows = C.sampleN nCycles $ traverse snd colsData
     -- TODO: this withGenClockResetEnable should not be necessary.
     -- The data (just the column titles) used here does not depend on clock, reset, or enable
@@ -51,10 +51,9 @@ takeSnapshot nCycles givenColsData = unlines styledLines
     styledLines = dropWhileEnd (== ' ') . intercalate "   " . zipWith rightPad colsSize <$> rows
     colsSize = foldr (max . length) 0 <$> transpose rows
 
-    nats = C.fromList ([0..] :: [Int])
     ceiledLog10 = (+1) . floor . logBase (10 :: Double) .  fromIntegral
-    bClkCount :: C.HiddenClockResetEnable dom => C.Signal dom String
-    bClkCount = leftPad (max (length "clk") $ ceiledLog10 (nCycles - 1)) . show <$> nats
+    clkCountColumn :: C.HiddenClockResetEnable dom => C.Signal dom String
+    clkCountColumn = leftPad (max (length "clk") $ ceiledLog10 (nCycles - 1)) . show <$> bClkCount
 
     pad
       :: ((String -> String -> String)
@@ -74,3 +73,17 @@ snapshot
 snapshot pathName testName nCycles bData = goldenVsString name (".snapshots" </> name) $ pure . fromString $ takeSnapshot nCycles bData
   where
     name = pathName </> testName
+
+bClkCount :: C.Signal dom Int
+bClkCount = C.fromList [0..]
+
+type EdgesState a = ([(Int, a)], a)
+fromEdges
+  :: forall dom a. (C.HiddenClockResetEnable dom, C.NFDataX a)
+  => a -> [(Int, a)] -> C.Signal dom a
+fromEdges initial edges0 = C.mealy transfer (edges0, initial) bClkCount
+  where
+    transfer :: EdgesState a -> Int -> (EdgesState a, a)
+    transfer steadyState@(edges, a) clk = case edges of
+      ((n, a') : edges') | clk >= n -> ((edges', a'), a')
+      _ -> (steadyState, a)
