@@ -1,7 +1,7 @@
 clk   ready   state   show char   clear   char          row    col
   0   0b1     ready   0b0         0b1     0b0000_0000   0b00   0b0000
-  1   0b1     clear   0b0         0b0     0b0000_0000   0b00   0b0000
-  2   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
+  1   0b1     ready   0b0         0b1     0b0000_0000   0b00   0b0000
+  2   0b1     clear   0b0         0b0     0b0000_0000   0b00   0b0000
   3   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
   4   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
   5   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
@@ -34,29 +34,29 @@ clk   ready   state   show char   clear   char          row    col
  32   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  33   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  34   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
- 35   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0000
+ 35   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  36   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0000
- 37   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0001
+ 37   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0000
  38   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0001
- 39   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0010
+ 39   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0001
  40   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0010
- 41   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0011
+ 41   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0010
  42   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0011
- 43   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0100
+ 43   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0011
  44   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0100
- 45   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0101
+ 45   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0100
  46   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0101
- 47   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0110
+ 47   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0101
  48   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0110
- 49   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0111
+ 49   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0110
  50   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0111
- 51   0b1     print   0b1         0b0     0b0011_0000   0b00   0b1000
+ 51   0b1     print   0b1         0b0     0b0011_0000   0b00   0b0111
  52   0b1     print   0b1         0b0     0b0011_0000   0b00   0b1000
- 53   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
+ 53   0b1     print   0b1         0b0     0b0011_0000   0b00   0b1000
  54   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
- 55   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
+ 55   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
  56   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
- 57   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
+ 57   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
  58   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  59   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  60   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
@@ -89,29 +89,29 @@ clk   ready   state   show char   clear   char          row    col
  87   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  88   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  89   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
- 90   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0000
+ 90   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  91   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0000
- 92   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0001
+ 92   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0000
  93   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0001
- 94   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0010
+ 94   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0001
  95   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0010
- 96   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0011
+ 96   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0010
  97   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0011
- 98   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0100
+ 98   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0011
  99   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0100
-100   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0101
+100   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0100
 101   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0101
-102   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0110
+102   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0101
 103   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0110
-104   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0111
+104   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0110
 105   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0111
-106   0b1     print   0b1         0b0     0b0011_0000   0b01   0b1000
+106   0b1     print   0b1         0b0     0b0011_0000   0b01   0b0111
 107   0b1     print   0b1         0b0     0b0011_0000   0b01   0b1000
-108   0b1     print   0b1         0b0     0b0011_0010   0b01   0b1001
+108   0b1     print   0b1         0b0     0b0011_0000   0b01   0b1000
 109   0b1     print   0b1         0b0     0b0011_0010   0b01   0b1001
-110   0b1     print   0b1         0b0     0b0011_0110   0b01   0b1010
+110   0b1     print   0b1         0b0     0b0011_0010   0b01   0b1001
 111   0b1     print   0b1         0b0     0b0011_0110   0b01   0b1010
-112   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000
+112   0b1     print   0b1         0b0     0b0011_0110   0b01   0b1010
 113   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000
 114   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000
 115   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000

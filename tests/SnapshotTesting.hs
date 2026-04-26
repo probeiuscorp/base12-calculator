@@ -39,7 +39,7 @@ takeSnapshot
   => Int
   -> (C.HiddenClockResetEnable dom => [ColData dom])
   -> String
-takeSnapshot nGivenCycles givenColsData = unlines styledLines
+takeSnapshot nCycles givenColsData = unlines styledLines
   where
     colsData :: C.HiddenClockResetEnable dom => [ColData dom]
     colsData = ("clk", bClkCount) : givenColsData
@@ -47,17 +47,14 @@ takeSnapshot nGivenCycles givenColsData = unlines styledLines
     -- TODO: this withGenClockResetEnable should not be necessary.
     -- The data (just the column titles) used here does not depend on clock, reset, or enable
     headers = fst <$> withGenClockResetEnable colsData
-    -- TODO: I can't figure out how to get the clock to go 0 -> 1 -> ... instead of 0 -> 0 -> 1 -> ...
-    -- This bandaid is to just drop the first clock cycle
-    nCycles = nGivenCycles + 1
-    rows = headers : drop 1 dataRows
+    rows = headers : dataRows
     styledLines = dropWhileEnd (== ' ') . intercalate "   " . zipWith rightPad colsSize <$> rows
     colsSize = foldr (max . length) 0 <$> transpose rows
 
-    nats = C.register (0 :: Int) $ nats + 1
+    nats = C.fromList ([0..] :: [Int])
     ceiledLog10 = (+1) . floor . logBase (10 :: Double) .  fromIntegral
     bClkCount :: C.HiddenClockResetEnable dom => C.Signal dom String
-    bClkCount = leftPad (max (length "clk") $ ceiledLog10 nCycles) . show <$> nats
+    bClkCount = leftPad (max (length "clk") $ ceiledLog10 (nCycles - 1)) . show <$> nats
 
     pad
       :: ((String -> String -> String)
