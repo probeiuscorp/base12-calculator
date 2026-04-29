@@ -59,7 +59,19 @@ accum sw btnL btnC btnR btnU btnD row = (bOledData, led, pure 0, pure 0)
   where
     btnPush = debounce btnU
     btnPop = debounce btnD
-    bWIPValue = pure calcValueZero
+    bKeypad :: Signal dom (BitVector 16)
+    bKeypad = pure 0
+    bDigits :: Signal dom (BitVector 12)
+    (bDigits, bButtonsRow) = unbundle $ split <$> bKeypad
+    bDigit :: Signal dom (Maybe (Unsigned 4))
+    bDigit = ifoldl (\ma i isUp -> if isUp
+      then ma <|> Just (bitCoerce i)
+      else ma) Nothing . unpack <$> bDigits
+    bWIPValue = inlineMoore (CalcValue False 0 1) bDigit $ \value mDigit -> case mDigit of
+      Nothing -> value
+      Just digit -> value { valNumerator = mul12 (valNumerator value) + zeroExtend digit }
+        where
+          mul12 n = n .<<. 3 + n .<<. 2
     led = bTop
     bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
       (1, 0, value) -> StackPush value
