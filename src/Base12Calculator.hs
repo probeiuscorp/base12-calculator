@@ -10,6 +10,7 @@ import Clash.Prelude
 import Calculator.Prelude
 import OLED (oled)
 import Keypad (keypad)
+import Clash.Sized.Vector.ToTuple (VecToTuple(vecToTuple))
 
 topEntity
   :: Clock DomMain
@@ -57,10 +58,14 @@ topEntity = exposeClockResetEnable accum
 -- For GHC versions 9.2 or older, use: {-# NOINLINE topEntity #-}
 {-# OPAQUE topEntity #-}
 
+data WorkingValueAction
+  = WIPDigit (Unsigned 4) | WIPPop CalcValue
+  | WIPReset | WIPPush | WIPNegate | WIPReciprocal
+  deriving (Eq, Ord, Show, Generic, NFDataX)
 accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
   where
-    btnPush = debounce btnU
-    btnPop = debounce btnD
+    btnPush = boolToBit <$> bPush
+    btnPop = bitToBool <$> debounce btnD
     (bCol, bKeypad) = unbundle $ keypad bRow
     bDigits :: Signal DomMain (BitVector 12)
     (bDigits, bButtonsRow) = unbundle $ split . withVector reverse <$> bKeypad
@@ -68,20 +73,37 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
     bDigit = ifoldl (\ma i isUp -> if isUp
       then ma <|> Just (bitCoerce i)
       else ma) Nothing . unpack <$> bDigits
-    bWIPValue = inlineMoore (CalcValue False 0 1) bDigit $ \value mDigit -> case mDigit of
-      Nothing -> value
-      Just digit -> value { valNumerator = mul12 (valNumerator value) + zeroExtend digit }
+
+    bBackspace, bPush, bNegate, bReciprocal :: Signal DomMain Bool
+    (bBackspace, bPush, bNegate, bReciprocal) = vecToTuple $ traverse bitCoerce bButtonsRow
+    bWIPAction = WIPDigit $$$: bDigit
+      <||> ((,) <$> btnPop <*> bmTopOfStack ## \(isPop, mValue) -> if isPop
+        then Just $ WIPPop $ mValue ?? defaultWorkingValue
+        else Nothing)
+      <||> (mWhen WIPPush <$> bPush)
+      <||> (mWhen WIPNegate <$> bNegate)
+      <||> (mWhen WIPReciprocal <$> bReciprocal)
+      <||> (mWhen WIPReset <$> bBackspace)
+    defaultWorkingValue = CalcValue False 0 1
+    bWIPValue = inlineMoore defaultWorkingValue bWIPAction $ withNoop $ \value -> \case
+      WIPPush -> CalcValue False 0 1
+      WIPPop fromStack -> fromStack
+      WIPNegate -> value { valIsNegative = not $ valIsNegative value }
+      WIPReciprocal -> value
+        { valNumerator = valDenominator value
+        , valDenominator = valNumerator value
+        }
+      WIPReset -> value { valNumerator = 0 }
+      WIPDigit digit -> value { valNumerator = mul12 (valNumerator value) + zeroExtend digit }
         where
           mul12 n = n .<<. 3 + n .<<. 2
-    led = zeroExtend <$> delayMaybe 0 (fmap (+1) <$> bDigit)
-    -- led = bDigit ## \case
-    --   Nothing -> 0
-    --   Just x -> zeroExtend (x + 1)
+
+    led = zeroExtend <$> bStackSize
     bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
-      (1, 0, value) -> StackPush value
-      (0, 1, _) -> StackPop
+      (1, False, value) -> StackPush value
+      (0, True, _) -> StackPop
       _ -> StackAck
-    (bTop, bStackResult) = unbundle $ stack bStateAction
+    (bmTopOfStack, bStackSize, bStackResult) = unbundle $ stack bStateAction
     bOledData = oled $ Just <$> bWIPValue
 
 counter = flip mealy 0 $ \cases
@@ -89,20 +111,22 @@ counter = flip mealy 0 $ \cases
   n 0 -> (n, n)
 
 data StackAction = StackPush CalcValue | StackPop | StackAck
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Generic, NFDataX)
 data StackResult = StackIdle | StackYield CalcValue | StackOverUnderflow Bool
   deriving (Eq, Ord, Show, Generic, NFDataX)
 data StackState = StackState
-  { stackTop :: Unsigned 16
+  { stackTop :: Unsigned 4
   , stackItems :: Vec 16 CalcValue
   } deriving (Eq, Ord, Show, Generic, NFDataX)
-stackMachine :: StackState -> StackAction -> (StackState, (Unsigned 16, StackResult))
-stackMachine state@(StackState top items) = let ok (transferred@(StackState top _), result) = (transferred, (top, result)) in ok . \case
-  StackPush value -> if top == 16
-    then (state, StackOverUnderflow True)
-    else (StackState (top + 1) (replace top value items), StackIdle)
-  StackPop -> if top == 0
-    then (state, StackOverUnderflow False)
-    else let i = top - 1 in (StackState i items, StackYield $ items !! i)
-  StackAck -> (state, StackIdle)
+stackMachine :: StackState -> StackAction -> (StackState, (Maybe CalcValue, Unsigned 4, StackResult))
+stackMachine state@(StackState top items) = let
+    ok (transferred@(StackState top' items'), result) = (transferred, (head items' `mWhen` (top' > 0), top', result))
+  in ok . \case
+    StackPush value -> if top == 16
+      then (state, StackOverUnderflow True)
+      else (StackState (top + 1) (replace top value items), StackIdle)
+    StackPop -> if top == 0
+      then (state, StackOverUnderflow False)
+      else let i = top - 1 in (StackState i items, StackYield $ items !! i)
+    StackAck -> (state, StackIdle)
 stack = mealy stackMachine $ StackState 0 $ repeat calcValueZero

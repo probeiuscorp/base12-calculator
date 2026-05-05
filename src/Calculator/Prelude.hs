@@ -5,6 +5,7 @@ module Calculator.Prelude (
 
 import Clash.Prelude
 import Data.Bifunctor (first, second, bimap)
+import Data.Maybe (fromMaybe)
 
 type NCalcValueBits = 32
 -- ceil (CalcValueBits / 3), add 2 to accommodate that Div here rounds down not up
@@ -37,7 +38,15 @@ infixr 2 ##
 ($:) :: (a -> b) -> a -> b
 ($:) = ($)
 infixr 6 $:
+($$$:) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+($$$:) = fmap . fmap
+infixr 6 $$$:
+(??) = flip fromMaybe
 
+withNoop :: (s -> i -> s) -> (s -> Maybe i -> s)
+withNoop transfer s = \case
+  Just i -> transfer s i
+  Nothing -> s
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
 inlineMoore initialState bIn transfer = moore transfer id initialState bIn
 testTransfer
@@ -71,6 +80,13 @@ debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
     then Wait
     else Releasing $ n - 1
 debounce = mealy debounceMachine Wait
+
+mWhen :: a -> Bool -> Maybe a
+mWhen a True = Just a
+mWhen _ _ = Nothing
+(<||>) :: Signal dom (Maybe a) -> Signal dom (Maybe a) -> Signal dom (Maybe a)
+(<||>) = liftA2 (<|>)
+infixl 3 <||>
 
 i --> f = s
   where
