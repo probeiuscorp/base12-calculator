@@ -63,7 +63,7 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
     btnPop = debounce btnD
     (bCol, bKeypad) = unbundle $ keypad bRow
     bDigits :: Signal DomMain (BitVector 12)
-    (bDigits, bButtonsRow) = unbundle $ split <$> bKeypad
+    (bDigits, bButtonsRow) = unbundle $ split . withVector reverse <$> bKeypad
     bDigit :: Signal DomMain (Maybe (Unsigned 4))
     bDigit = ifoldl (\ma i isUp -> if isUp
       then ma <|> Just (bitCoerce i)
@@ -82,7 +82,7 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
       (0, 1, _) -> StackPop
       _ -> StackAck
     (bTop, bStackResult) = unbundle $ stack bStateAction
-    bOledData = oled $ pure $ Just $ CalcValue False 20 30
+    bOledData = oled $ Just <$> bWIPValue
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)

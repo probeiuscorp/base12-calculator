@@ -20,9 +20,11 @@ calcValueZero = CalcValue False 0 1
 
 withPacking :: BitPack a => (BitVector (BitSize a) -> BitVector (BitSize a)) -> a -> a
 withPacking f a = unpack $ f $ pack a
-
 withUnPacking :: BitPack a => (a -> a) -> (BitVector (BitSize a) -> BitVector (BitSize a))
 withUnPacking f a = pack $ f $ unpack a
+
+withVector :: KnownNat n => (Vec n Bit -> Vec n Bit) -> BitVector n -> BitVector n
+withVector f a = bitCoerce $ f $ bitCoerce a
 
 createDomain vSystem{vName="DomMain", vResetPolarity=ActiveLow}
 
