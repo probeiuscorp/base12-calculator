@@ -1,6 +1,10 @@
-module Calculator.Prelude where
+module Calculator.Prelude (
+  module Calculator.Prelude,
+  first, second, bimap,
+) where
 
 import Clash.Prelude
+import Data.Bifunctor (first, second, bimap)
 
 type NCalcValueBits = 32
 -- ceil (CalcValueBits / 3), add 2 to accommodate that Div here rounds down not up
@@ -29,10 +33,11 @@ withGenClockResetEnable s = exposeClockResetEnable s clockGen resetGen enableGen
 fa ## f = f <$> fa
 infixr 2 ##
 ($:) :: (a -> b) -> a -> b
-($:) = ($:)
+($:) = ($)
 infixr 6 $:
 
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
+inlineMoore initialState bIn transfer = moore transfer id initialState bIn
 testTransfer
   :: (s -> i -> (s, o))
   -> (s -> i -> (s, (s, o)))
@@ -48,6 +53,22 @@ unTestMealy
   :: Signal dom (s, o)
   -> Signal dom o
 unTestMealy = fmap snd
+
+data DebounceState = Wait | Pressing (Unsigned 8) | Releasing (Unsigned 8)
+  deriving (Eq, Ord, Show, Generic, NFDataX)
+debounceMachine :: DebounceState -> Bit -> (DebounceState, Bit)
+debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
+  Wait 0 -> ok Wait
+  Wait 1 -> ok $ Pressing alarmTime
+  (Pressing _) 0 -> ok Wait
+  (Pressing n) 1 -> if n == 0
+    then (Releasing alarmTime, 1)
+    else ok $ Pressing $ n - 1
+  s@(Releasing _) 1 -> ok s
+  (Releasing n) 0 -> ok $ if n == 0
+    then Wait
+    else Releasing $ n - 1
+debounce = mealy debounceMachine Wait
 
 i --> f = s
   where

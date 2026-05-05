@@ -88,6 +88,7 @@ library
   exposed-modules:
     Calculator.Prelude
     Base12Calculator
+    Keypad
     OLED
   default-language: Haskell2010
 

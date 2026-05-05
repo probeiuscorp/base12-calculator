@@ -37,3 +37,25 @@
       );
       assign ~RESULT[7:0] = {~SYM[1], ~SYM[7], ~SYM[6], ~SYM[8], ~SYM[5], ~SYM[4], ~SYM[3], ~SYM[2]};
       // oledDriver end
+- BlackBox:
+    name: Keypad.keypadDriver
+    kind: Declaration
+    type: |-
+      keypadDriver
+        :: Clock dom
+        -> Reset dom
+        -> Signal dom (BitVector 4)
+        -> Signal dom (BitVector 20)
+    template: |-
+      // keypadDriver begin
+      wire [3:0] ~GENSYM[col][1];
+      wire [15:0] ~GENSYM[keys][2];
+      keypad ~GENSYM[keypad_driver][0] (
+        .clk(~ARG[0]),
+        .rst_n(~ARG[1]),
+        .row(~ARG[2]),
+        .col(~SYM[1]),
+        .keys(~SYM[2])
+      );
+      assign ~RESULT[19:0] = {~SYM[1], ~SYM[2]};
+      // keypadDriver end

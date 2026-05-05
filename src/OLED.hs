@@ -3,7 +3,6 @@ module OLED (oled, oledMachine, fanOutOLEDResult, OLEDState(..), OLEDStep(..)) w
 import Clash.Prelude hiding (showChar)
 import Calculator.Prelude
 import Clash.Annotations.Primitive
-import Data.Bifunctor (Bifunctor(bimap))
 
 {-# OPAQUE oledDriver #-}
 {-# ANN oledDriver hasBlackBox #-}

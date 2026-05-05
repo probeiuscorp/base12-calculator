@@ -18,7 +18,7 @@ puts "project: $project_name"
 puts "top:     ${top}.v"
 
 # Load sources
-read_verilog [ glob src/*.v ip/oled/src/*.sv ]
+read_verilog [ glob src/*.v ip/oled/src/*.sv ip/*.v ]
 read_xdc ${project_name}.xdc
 
 # Run Synthesis
