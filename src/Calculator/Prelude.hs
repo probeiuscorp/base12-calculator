@@ -11,10 +11,11 @@ type NCalcValueBits = 32
 -- ceil (CalcValueBits / 3), add 2 to accommodate that Div here rounds down not up
 type NBCDDigits = Div (NCalcValueBits + 3 - 1) 3
 type NBCDBits = NBCDDigits * 4
+type CalcTerm = Unsigned NCalcValueBits
 data CalcValue = CalcValue
   { valIsNegative :: Bool
-  , valNumerator :: Unsigned NCalcValueBits
-  , valDenominator :: Unsigned NCalcValueBits
+  , valNumerator :: CalcTerm
+  , valDenominator :: CalcTerm
   } deriving (Eq, Ord, Show, Generic, NFDataX)
 calcValueZero :: CalcValue
 calcValueZero = CalcValue False 0 1
@@ -65,21 +66,21 @@ unTestMealy
   -> Signal dom o
 unTestMealy = fmap snd
 
-data DebounceState = Wait | Pressing (Unsigned 8) | Releasing (Unsigned 8)
+data DebounceState = DebounceWait | DebouncePressing (Unsigned 8) | DebounceReleasing (Unsigned 8)
   deriving (Eq, Ord, Show, Generic, NFDataX)
 debounceMachine :: DebounceState -> Bit -> (DebounceState, Bit)
 debounceMachine = let ok = (, 0); alarmTime = 128 in \cases
-  Wait 0 -> ok Wait
-  Wait 1 -> ok $ Pressing alarmTime
-  (Pressing _) 0 -> ok Wait
-  (Pressing n) 1 -> if n == 0
-    then (Releasing alarmTime, 1)
-    else ok $ Pressing $ n - 1
-  s@(Releasing _) 1 -> ok s
-  (Releasing n) 0 -> ok $ if n == 0
-    then Wait
-    else Releasing $ n - 1
-debounce = mealy debounceMachine Wait
+  DebounceWait 0 -> ok DebounceWait
+  DebounceWait 1 -> ok $ DebouncePressing alarmTime
+  (DebouncePressing _) 0 -> ok DebounceWait
+  (DebouncePressing n) 1 -> if n == 0
+    then (DebounceReleasing alarmTime, 1)
+    else ok $ DebouncePressing $ n - 1
+  s@(DebounceReleasing _) 1 -> ok s
+  (DebounceReleasing n) 0 -> ok $ if n == 0
+    then DebounceWait
+    else DebounceReleasing $ n - 1
+debounce = mealy debounceMachine DebounceWait
 
 mWhen :: a -> Bool -> Maybe a
 mWhen a True = Just a

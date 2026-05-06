@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module SnapshotTesting (snapshot, col, raw, fromEdges) where
+module SnapshotTesting (snapshot, col, raw, showMaybe, fromEdges) where
 
 import Prelude
 import Calculator.Prelude
@@ -15,6 +15,13 @@ import Data.ByteString.Lazy.Char8 (pack, unpack)
 
 fromString :: String -> LBS.ByteString
 fromString = pack
+showMaybe :: forall a. C.BitPack a => Maybe a -> String
+showMaybe = \case
+  Just a -> show $ C.pack a
+  Nothing -> '-' <$ show (C.pack placeholder)
+    where
+      placeholder :: a
+      placeholder = C.bitCoerce (0 :: C.Unsigned (C.BitSize a))
 
 class SnapshotPrintable a where
   snapshotPrint :: a -> String

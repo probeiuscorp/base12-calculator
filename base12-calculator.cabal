@@ -89,6 +89,7 @@ library
     Calculator.Prelude
     Base12Calculator
     Keypad
+    GCF
     OLED
   default-language: Haskell2010
 
@@ -108,17 +109,6 @@ executable clashi
     ghc-options: -dynamic
   build-depends: base, clash-ghc, base12-calculator
 
-test-suite doctests
-  type:             exitcode-stdio-1.0
-  default-language: Haskell2010
-  main-is:          doctests.hs
-  ghc-options:      -Wall -Wcompat -threaded
-  hs-source-dirs:   tests
-  build-depends:
-    base,
-    base12-calculator,
-    doctest-parallel >= 0.2 && < 0.4,
-
 test-suite test-library
   import: common-options
   default-language: Haskell2010
@@ -129,6 +119,7 @@ test-suite test-library
   other-modules:
     SnapshotTesting
     Tests.Calculator.TestSnapshots
+    Tests.Calculator.TestGCF
     Tests.Calculator.TestOLED
   build-depends:
     base12-calculator,
