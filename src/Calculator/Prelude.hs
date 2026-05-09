@@ -49,6 +49,7 @@ withNoop transfer s = \case
   Just i -> transfer s i
   Nothing -> s
 inlineMealy initialState bIn transfer = mealy transfer initialState bIn
+inlineMealyB initialState bIn transfer = mealyB transfer initialState bIn
 inlineMoore initialState bIn transfer = moore transfer id initialState bIn
 testTransfer
   :: (s -> i -> (s, o))

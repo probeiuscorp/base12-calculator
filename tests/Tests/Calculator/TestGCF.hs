@@ -8,6 +8,11 @@ import SnapshotTesting
 import Test.Tasty
 import GCF
 
+showUint8Pair :: Maybe (C.Unsigned 8, C.Unsigned 8) -> String
+showUint8Pair = \case
+  Just (a', b') -> snapshotPrint a' <> "," <> snapshotPrint b'
+  Nothing -> '-' <$ "0b0111_1000,0b0101_0000"
+
 tests :: TestTree
 tests = testGroup "gcf"
   [ simple (10, 20)
@@ -17,16 +22,13 @@ tests = testGroup "gcf"
   , simple (120, 80)
   ]
   where
-    simple (a, b) = snapshot @C.System "gcf" (show a <> "–" <> show b) 30 cols
-      where
-        ba, bb :: C.Signal C.System (C.Unsigned 8)
-        ba = pure a
-        bb = pure b
+    simple :: (C.Unsigned 8, C.Unsigned 8) -> TestTree
+    simple (a, b) = snapshot @C.System "gcf" (show a <> "–" <> show b) 30 $
+      let
         bStart = fromEdges False [(3, True), (4, False)]
-        mData = gcf ba bb bStart
-        cols =
-          [ col "A" ba
-          , col "B" bb
-          , col "start" bStart
-          , raw "mData" $ showMaybe <$> mData
-          ]
+        bmAB = bStart ## \start -> if start then Just (a, b) else Nothing
+        bmData = gcf'er bmAB
+      in
+        [ raw "a,b" $ showUint8Pair <$> bmAB
+        , raw "gcf" $ showMaybe <$> bmData
+        ]

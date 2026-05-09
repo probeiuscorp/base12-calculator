@@ -1,6 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 
-module GCF where
+module GCF (gcf'er) where
 
 import Clash.Prelude
 import Calculator.Prelude
@@ -11,25 +11,23 @@ data GCFStepState n = GCFStepState
   , nSharedPowers :: Unsigned 6
   } deriving (Eq, Ord, Show, Generic, NFDataX)
 data GCFState n
-  = Wait (Maybe (Unsigned n))
+  = Wait
   | FactorOut2's (GCFStepState n)
   | FactorOutOthers (GCFStepState n)
   deriving (Eq, Ord, Show, Generic, NFDataX)
 
 -- | Binary Euclidean GCF algorithm
-gcf
+gcf'er
   :: (KnownNat n, KnownDomain dom, HiddenClockResetEnable dom)
-  => Signal dom (Unsigned n)
-  -> Signal dom (Unsigned n)
-  -> Signal dom Bool
+  => Signal dom (Maybe (Unsigned n, Unsigned n))
   -> Signal dom (Maybe (Unsigned n))
-gcf ba bb bStart = mealy transfer (Wait Nothing) $ bundle (ba, bb, bStart)
+gcf'er = mealy transfer Wait
   where
     ok = (, Nothing)
-    transfer s (a0, b0, start) = case s of
-      Wait mHeldTerm -> if start
-        then ok $ FactorOut2's $ GCFStepState a0 b0 0
-        else (s, mHeldTerm)
+    transfer s mAB = case s of
+      Wait -> case mAB of
+        Just (a, b) -> ok $ FactorOut2's $ GCFStepState a b 0
+        Nothing -> ok s
       FactorOut2's stepState@GCFStepState{..} -> ok $
         if bitToBool (lsb a) || bitToBool (lsb b)
           then FactorOutOthers stepState
@@ -48,4 +46,4 @@ gcf ba bb bStart = mealy transfer (Wait Nothing) $ bundle (ba, bb, bStart)
           | otherwise -> stepState { b = (b - a) .>>. 1 }
         -- TODO: Find a way to not use fromIntegral
         else let mGCF = Just (a .<<. fromIntegral nSharedPowers) in
-          (Wait mGCF, mGCF)
+          (Wait, mGCF)
