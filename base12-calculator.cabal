@@ -87,6 +87,7 @@ library
   hs-source-dirs: src
   exposed-modules:
     Calculator.Prelude
+    Calculator.Handshake
     Base12Calculator
     Keypad
     Arithmetic
