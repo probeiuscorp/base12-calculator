@@ -28,7 +28,9 @@ gcf'er = mealy transfer Wait
       Wait -> case mAB of
         Just (a, b) -> if a == 0 || b == 0
           -- special case: if numerator or denominator are zero, just answer with 1
-          then (Wait, Just 1)
+          then (Wait,) . Just $ if a == 0 && b == 0
+            then 1
+            else max a b
           else ok $ FactorOut2's $ GCFStepState a b 0
         Nothing -> ok s
       FactorOut2's stepState@GCFStepState{..} -> ok $
