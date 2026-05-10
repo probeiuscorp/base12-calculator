@@ -1,6 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 
-module Arithmetic (arithmetic, ArithmeticAction(..), simplify, simplifyHandshake, flooredDivide) where
+module Arithmetic (arithmetic, ArithmeticAction(..), simplify, flooredDivide) where
 
 import Clash.Prelude
 import Calculator.Prelude
@@ -21,7 +21,7 @@ arithmetic
   -> Signal dom (Maybe CalcValue)
   -> Signal dom (Maybe ArithmeticAction)
   -> (Signal dom Bool, Signal dom (Maybe CalcValue))  -- ^ raised to True when not enough values
-arithmetic bma bmb bmAction = (bError, fst $ simplify bmOutput)
+arithmetic bma bmb bmAction = (bError, simplify bmOutput)
   where
     asSigned :: CalcValue -> (Signed NCalcValueBits, Signed NCalcValueBits)
     asSigned CalcValue{..} = ((if valIsNegative then negate else id) $ bitCoerce valNumerator, bitCoerce valDenominator)
@@ -55,11 +55,11 @@ data SimplifyState
   | SimplifyDivide CalcValue CalcTerm (Maybe CalcTerm)
   deriving (Eq, Ord, Show, Generic, NFDataX)
 -- | Takes a fraction that may be unsimplified like 16/10 and simplify it (such as into 8/5)
-simplify
+simplifyMealy
   :: HiddenClockResetEnable dom
   => Signal dom (Maybe CalcValue)
   -> (Signal dom (Maybe CalcValue), Signal dom (Maybe CalcTerm))
-simplify bmValue = (bmSimplified, bmQuotient)
+simplifyMealy bmValue = (bmSimplified, bmQuotient)
   where
     bmGCF = gcf'er bmGCFab
     bmQuotient = flooredDivide bmRatio
@@ -85,12 +85,12 @@ simplify bmValue = (bmSimplified, bmQuotient)
 (|>) = (&)
 infixl 1 |>
 
-simplifyHandshake
+simplify
   :: (KnownDomain dom, HiddenClockResetEnable dom)
   -- HS.Handshake dom a b is an alias for
   -- (Signal dom (Maybe a)) -> (Signal dom (Maybe b))
   => HS.Handshake dom CalcValue CalcValue
-simplifyHandshake =
+simplify =
   -- first the gcf'er (one whole valid identifier) expects two numbers, not a whole CalcValue
   HS.mapin (\CalcValue{..} -> (valNumerator, valDenominator))
   -- we can now apply this input mapping to the gcf'er Handshake

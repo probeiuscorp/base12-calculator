@@ -23,6 +23,7 @@ showMaybe' format = \case
       placeholder :: a
       placeholder = C.bitCoerce (0 :: C.Unsigned (C.BitSize a))
 showMaybe = showMaybe' (show . C.pack)
+printMaybeCalcValue = maybe "----" show
 
 class SnapshotPrintable a where
   snapshotPrint :: a -> String

@@ -20,7 +20,7 @@ data CalcValue = CalcValue
   , valDenominator :: CalcTerm
   } deriving (Eq, Ord, Generic, NFDataX, BitPack)
 instance Show CalcValue where
-  show CalcValue{..} = (if valIsNegative then ('-' :) else id) $ show valNumerator <> "⁄" <> show valDenominator
+  show CalcValue{..} = (if valIsNegative then ('-' :) else id) $ show valNumerator <> "|" <> show valDenominator
 calcValueZero :: CalcValue
 calcValueZero = CalcValue False 0 1
 
