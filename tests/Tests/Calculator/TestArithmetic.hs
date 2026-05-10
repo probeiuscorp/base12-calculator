@@ -44,7 +44,9 @@ tests = testGroup "arithmetic"
         , raw "quotient" $ printMaybeCalcValue <$> bSimplified
         ]
     simplifyCases = testGroup "simplify"
-      [ simplifyCase $ CalcValue False 1 1
+      [ simplifyCase $ CalcValue False 0 1
+      , simplifyCase $ CalcValue False 1 0
+      , simplifyCase $ CalcValue False 1 1
       , simplifyCase $ CalcValue True 4 2
       , simplifyCase $ CalcValue True 20 5
       , simplifyCase $ CalcValue False 18 12

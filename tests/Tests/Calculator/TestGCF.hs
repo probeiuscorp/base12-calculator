@@ -15,7 +15,10 @@ showUint8Pair = \case
 
 tests :: TestTree
 tests = testGroup "gcf"
-  [ simple (10, 20)
+  [ simple (0, 4)
+  , simple (18, 0)
+  , simple (0, 0)
+  , simple (10, 20)
   , simple (32, 32)
   , simple (9, 21)
   , simple (21, 9)

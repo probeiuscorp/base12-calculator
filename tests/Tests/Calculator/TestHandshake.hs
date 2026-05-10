@@ -41,9 +41,10 @@ tests = fixClockResetEnable $ testGroup "handshake"
       [ raw "in" $ showMaybe <$> bmIn
       , raw "out" $ showMaybe <$> hs bmIn
       ]
-  , testHandshake "mixed reuse" 2
-    $ HS.dimap (\a -> (a, a)) (uncurry (+))
-    $ HS.reuse (HS.hold (+) hsInc)
+  , testHandshake "mixed reuse" 2 $ splitAndSum $ HS.reuse (HS.hold (+) hsInc)
+  , testHandshake "instant simple" 2 id
+  , testHandshake "instant hold" 2 $ HS.hold (+) id
+  , testHandshake "instant reuse" 2 $ splitAndSum $ HS.reuse id
   ]
     where
       splitAndSum = HS.dimap (\a -> (a, a)) (uncurry (+))

@@ -26,7 +26,10 @@ gcf'er = mealy transfer Wait
     ok = (, Nothing)
     transfer s mAB = case s of
       Wait -> case mAB of
-        Just (a, b) -> ok $ FactorOut2's $ GCFStepState a b 0
+        Just (a, b) -> if a == 0 || b == 0
+          -- special case: if numerator or denominator are zero, just answer with 1
+          then (Wait, Just 1)
+          else ok $ FactorOut2's $ GCFStepState a b 0
         Nothing -> ok s
       FactorOut2's stepState@GCFStepState{..} -> ok $
         if bitToBool (lsb a) || bitToBool (lsb b)

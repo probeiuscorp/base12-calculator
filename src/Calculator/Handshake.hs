@@ -64,9 +64,10 @@ holdSome takeSlice f hs bmi = bmb
   where
     bma = hs bmi
     bmb = inlineMealyB Nothing (bmi, bma) $ \s (mi, ma) -> case s of
-      Nothing -> case mi of
-        Nothing -> (s, Nothing)
-        Just i -> (Just (takeSlice i), Nothing)
+      Nothing -> case (mi, ma) of
+        (Nothing, _) -> (s, Nothing)
+        (Just i, Just a) -> (s, Just $ f (takeSlice i) a)
+        (Just i, _) -> (Just (takeSlice i), Nothing)
       Just i' -> case ma of
         Nothing -> (s, Nothing)
         Just a -> (Nothing, Just (f i' a))
