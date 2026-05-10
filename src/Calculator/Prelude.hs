@@ -1,10 +1,12 @@
 module Calculator.Prelude (
   module Calculator.Prelude,
   first, second, bimap,
+  on, (&),
 ) where
 
 import Clash.Prelude
 import Data.Bifunctor (first, second, bimap)
+import Data.Function (on, (&))
 import Data.Maybe (fromMaybe)
 
 type NCalcValueBits = 32
@@ -16,7 +18,9 @@ data CalcValue = CalcValue
   { valIsNegative :: Bool
   , valNumerator :: CalcTerm
   , valDenominator :: CalcTerm
-  } deriving (Eq, Ord, Show, Generic, NFDataX)
+  } deriving (Eq, Ord, Generic, NFDataX, BitPack)
+instance Show CalcValue where
+  show CalcValue{..} = (if valIsNegative then ('-' :) else id) $ show valNumerator <> "⁄" <> show valDenominator
 calcValueZero :: CalcValue
 calcValueZero = CalcValue False 0 1
 
@@ -33,7 +37,7 @@ createDomain vSystem{vName="DomMain", vResetPolarity=ActiveLow}
 withGenClockResetEnable :: KnownDomain dom => (HiddenClockResetEnable dom => r) -> r
 withGenClockResetEnable s = exposeClockResetEnable s clockGen resetGen enableGen
 
-(##) :: Functor f => f a -> (a -> b)-> f b
+(##) :: Functor f => f a -> (a -> b) -> f b
 fa ## f = f <$> fa
 infixr 2 ##
 ($:) :: (a -> b) -> a -> b
