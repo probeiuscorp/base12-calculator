@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module SnapshotTesting (snapshot, snapshotPrint, col, raw, showMaybe, showMaybe', fromEdges, ColData) where
+module SnapshotTesting (snapshot, snapshotPrint, fixClockResetEnable, col, raw, showMaybe, showMaybe', printMaybeCalcValue, fromEdges, ColData) where
 
 import Prelude
 import Calculator.Prelude
@@ -23,6 +23,7 @@ showMaybe' format = \case
       placeholder :: a
       placeholder = C.bitCoerce (0 :: C.Unsigned (C.BitSize a))
 showMaybe = showMaybe' (show . C.pack)
+printMaybeCalcValue = maybe "----" show
 
 class SnapshotPrintable a where
   snapshotPrint :: a -> String
@@ -32,15 +33,18 @@ instance SnapshotPrintable LBS.ByteString where
 instance C.BitPack a => SnapshotPrintable a where
   snapshotPrint = show . C.pack
 
+-- | I can't figure out why this is necessary. Implicit params are really annoying.
+fixClockResetEnable :: C.KnownDomain dom => (C.HiddenClockResetEnable dom => r) -> r
+fixClockResetEnable = withGenClockResetEnable
+
 type ColData dom = (String, C.Signal dom String)
 col
   :: (C.KnownDomain dom, SnapshotPrintable a)
   => String
-  -> (C.HiddenClockResetEnable dom => C.Signal dom a)
-  -> (C.HiddenClockResetEnable dom => ColData dom)
+  -> C.Signal dom a
+  -> ColData dom
 col title bData = (title, snapshotPrint <$> bData)
-raw :: C.KnownDomain dom => String
-  -> (C.HiddenClockResetEnable dom => C.Signal dom String) -> (C.HiddenClockResetEnable dom => ColData dom)
+raw :: C.KnownDomain dom => String -> C.Signal dom String -> ColData dom
 raw = (,)
 takeSnapshot
   :: forall dom. C.KnownDomain dom
@@ -54,7 +58,7 @@ takeSnapshot nCycles givenColsData = unlines styledLines
     dataRows = C.sampleN nCycles $ traverse snd colsData
     -- TODO: this withGenClockResetEnable should not be necessary.
     -- The data (just the column titles) used here does not depend on clock, reset, or enable
-    headers = fst <$> withGenClockResetEnable colsData
+    headers = fst <$> fixClockResetEnable colsData
     rows = headers : dataRows
     styledLines = dropWhileEnd (== ' ') . intercalate "   " . zipWith rightPad colsSize <$> rows
     colsSize = foldr (max . length) 0 <$> transpose rows

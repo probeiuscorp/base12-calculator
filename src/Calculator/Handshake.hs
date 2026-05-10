@@ -1,30 +1,59 @@
 module Calculator.Handshake
   ( Handshake
-  , mapin, mapout, holdSome, hold, reuse
+  , mapin, mapout, dimap, holdSome, hold, reuse
   ) where
 
 import Clash.Prelude
 import Calculator.Prelude
 
+-- | A Handshake is an alias / useful way of reasoning about multi-clock-cycle operations.
+-- In Verilog I called these "four signal handshakes." One module would have a "input" and
+-- "ready" signal while the other would have an "output" and "done" signal.
+-- Despite how common this is it's really painful in Verilog, with so much room to make mistakes.
+-- With Handshake's however, composing two such operations is actually just regular function composition!
+
+-- The expectation is that when the consumer (whoever owns the "input") is "ready",
+-- they will switch the `Maybe a` to a Just for one clock cycle with the valid input.
+-- Then when the producer is "done", they'll switch the `Maybe b` to a Just for one clock
+-- cycle with the valid output.
 type Handshake dom a b = Signal dom (Maybe a) -> Signal dom (Maybe b)
 
+-- | Apply simple transformation to the input a Handshake is expecting
 mapin
-  :: (a -> b)
-  -> Handshake dom b o
-  -> Handshake dom a o
+  :: (a -> b)  -- ^ the simple transformation
+  -> Handshake dom b o  -- ^ original Handshake
+  -> Handshake dom a o  -- ^ your new Handshake
 mapin f hs bma = hs $ f $$$: bma
 
+-- | Apply simple transformation to the output a Handshake gives
 mapout
-  :: (a -> b)
-  -> Handshake dom i a
-  -> Handshake dom i b
+  :: (a -> b)  -- ^ the simple transformation
+  -> Handshake dom i a  -- ^ original Handshake
+  -> Handshake dom i b  -- ^ your new Handshake
 mapout f hs bma = f $$$: hs bma
 
+-- | Useful
+dimap
+  :: (i' -> i)
+  -> (o -> o')
+  -> Handshake dom i o
+  -> Handshake dom i' o'
+dimap lmap rmap = mapin lmap . mapout rmap
+
+-- |
+hold
+  :: (KnownDomain dom, HiddenClockResetEnable dom, NFDataX i, NFDataX a, NFDataX b)
+  => (i -> a -> b)  -- ^ combine the initial input with the Handshake's result
+  -> Handshake dom i a  -- ^ original Handshake that turns i's into a's in time
+  -> Handshake dom i b
+hold = holdSome id
+
+-- |
 holdSome
   :: (KnownDomain dom, HiddenClockResetEnable dom, NFDataX i, NFDataX i', NFDataX a, NFDataX b)
-  => (i -> i')
-  -> (i' -> a -> b)
-  -> Handshake dom i a
+  => (i -> i')  -- ^ take a (smaller) slice of what you _need_ from the initial input
+  -> (i' -> a -> b)  -- ^ combine a slice of the initial input with the Handshake's result
+  -> Handshake dom i a  -- ^ original Handshake that turns i's into a's in time
   -> Handshake dom i b
 holdSome takeSlice f hs bmi = bmb
   where
@@ -36,18 +65,17 @@ holdSome takeSlice f hs bmi = bmb
       Just i' -> case ma of
         Nothing -> (s, Nothing)
         Just a -> (Nothing, Just (f i' a))
--- | Specialization to hold all of input
-hold = holdSome id
 
 data ReuseState a b
   = ReuseWait
   | ReuseReceived a
   | ReuseOneDone b
   deriving (Eq, Ord, Show, Generic, NFDataX)
+-- |
 reuse
   :: (KnownDomain dom, HiddenClockResetEnable dom, NFDataX a, NFDataX b)
-  => Handshake dom a b
-  -> Handshake dom (a, a) (b, b)
+  => Handshake dom a b  -- ^ Handshake that does one thing at a time
+  -> Handshake dom (a, a) (b, b)  -- ^ your new Handshake that'll be ran twice on one instantiation of your original Handshake
 reuse hs bmaa = bmbb
   where
     bmb = hs bma

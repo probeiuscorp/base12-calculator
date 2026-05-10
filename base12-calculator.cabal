@@ -121,6 +121,7 @@ test-suite test-library
   other-modules:
     SnapshotTesting
     Tests.Calculator.TestSnapshots
+    Tests.Calculator.TestHandshake
     Tests.Calculator.TestArithmetic
     Tests.Calculator.TestGCF
     Tests.Calculator.TestOLED
