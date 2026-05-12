@@ -4,7 +4,7 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Base12Calculator where
+module Base12Calculator (topEntity) where
 
 import Clash.Prelude
 import Calculator.Prelude
@@ -113,27 +113,27 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
       <||> (mWhen WIPReciprocal <$> bReciprocal)
       <||> (mWhen WIPReset <$> bBackspace)
     defaultWorkingValue = CalcValue False 0 1
-    bWIPValue = inlineMoore defaultWorkingValue bWIPAction $ withNoop $ \value -> \case
-      WIPPush -> CalcValue False 0 1
-      WIPPop fromStack -> fromStack
-      WIPNegate -> value { valIsNegative = not $ valIsNegative value }
-      WIPReciprocal -> value
+    bmWIPValue = inlineMoore Nothing bWIPAction $ withNoop $ \mValue -> let value = mValue ?? defaultWorkingValue in \case
+      WIPPush -> Nothing
+      WIPPop fromStack -> Just fromStack
+      WIPNegate -> Just $ value { valIsNegative = not $ valIsNegative value }
+      WIPReciprocal -> Just $ value
         { valNumerator = valDenominator value
         , valDenominator = valNumerator value
         }
-      WIPReset -> value { valNumerator = 0 }
-      WIPDigit digit -> value { valNumerator = mul12 (valNumerator value) + zeroExtend digit }
+      WIPReset -> Just $ value { valNumerator = 0 }
+      WIPDigit digit -> Just $ value { valNumerator = mul12 (valNumerator value) + zeroExtend digit }
         where
           mul12 n = n .<<. 3 + n .<<. 2
 
     led = zeroExtend <$> bStackSize
-    bStackControlsAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
-      (1, False, value) -> Just $ StackPush value
+    bStackControlsAction = (,,) <$> btnPush <*> btnPop <*> bmWIPValue ## \case
+      (1, False, Just value) -> Just $ StackPush value
       (0, True, _) -> Just StackPop
       _ -> Nothing
     (bmTopOfStack, bStackSize, bStackResult) = unbundle $ stack $ delay Nothing bmArithmeticStackAction <||> bStackControlsAction
 
-    bOledData = oled $ Just <$> bWIPValue
+    bOledData = oled $ bmWIPValue <||> bmTopOfStack
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)
