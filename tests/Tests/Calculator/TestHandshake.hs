@@ -6,6 +6,7 @@ import SnapshotTesting
 
 import Test.Tasty
 import qualified Calculator.Handshake as HS
+import Tests.Calculator.TestGCF (showUint8Pair)
 
 hsInc :: (KnownDomain dom, HiddenClockResetEnable dom) => HS.Handshake dom (Unsigned 8) (Unsigned 8)
 hsInc bmi = inlineMealy Nothing bmi $ \s mi -> case s of
@@ -32,6 +33,18 @@ tests :: TestTree
 tests = fixClockResetEnable $ testGroup "handshake"
   [ testHandshake "simple" 2 hsInc
   , testHandshake "composed" 2 $ hsInc . hsInc
+  , snapshot @System "handshake" "first" 30 $ let
+      bmIn = impulse 2 (2 :: Unsigned 8, 4 :: Unsigned 8)
+    in
+      [ raw "in" $ showUint8Pair <$> bmIn
+      , raw "out" $ showUint8Pair <$> HS.first hsInc bmIn
+      ]
+  , snapshot @System "handshake" "instant first" 30 $ let
+      bmIn = impulse 2 (2 :: Unsigned 8, 4 :: Unsigned 8)
+    in
+      [ raw "in" $ showUint8Pair <$> bmIn
+      , raw "out" $ showUint8Pair <$> HS.first id bmIn
+      ]
   , testHandshake "hold" 2 $ HS.hold (+) hsInc
   , testHandshake "mixed" 2 $ hsInc . HS.hold (+) hsInc
   , snapshot @System "handshake" "reuse" 30 $ let

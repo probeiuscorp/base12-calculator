@@ -1,10 +1,11 @@
 module Calculator.Handshake
   ( Handshake
-  , mapin, mapout, dimap, holdSome, hold, reuse
+  , mapin, mapout, dimap
+  , Calculator.Handshake.first, holdSome, hold, reuse
   ) where
 
 import Clash.Prelude
-import Calculator.Prelude
+import Calculator.Prelude hiding (first)
 
 -- | A Handshake is an alias / useful way of reasoning about multi-clock-cycle operations.
 -- In Verilog I called these "four signal handshakes." One module would have a "input" and
@@ -39,6 +40,22 @@ dimap
   -> Handshake dom i o
   -> Handshake dom i' o'
 dimap lmap rmap = mapin lmap . mapout rmap
+
+-- | Handshakes distribute over products
+first
+  :: (KnownDomain dom, HiddenClockResetEnable dom, NFDataX i, NFDataX o, NFDataX a)
+  => Handshake dom i o
+  -> Handshake dom (i, a) (o, a)
+first hs bmia = bmoa
+  where
+    bmo = hs $ delay Nothing bmi
+    (bmi, bmoa) = inlineMealyB Nothing (bmia, bmo) $ \s (mia, mo) -> case s of
+      Nothing -> case mia of
+        Nothing -> (Nothing, (Nothing, Nothing))
+        Just (i, a) -> (Just a, (Just i, Nothing))
+      Just a -> case mo of
+        Nothing -> (s, (Nothing, Nothing))
+        Just o -> (Nothing, (Nothing, Just (o, a)))
 
 -- | Hold/recall the original input when given Handshake is done.
 -- Mappings and composition are the two fundamental means of using Handshakes, however
