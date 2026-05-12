@@ -126,7 +126,9 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
         where
           mul12 n = n .<<. 3 + n .<<. 2
 
-    led = zeroExtend <$> bStackSize
+    ledLookup :: Vec 16 (Unsigned 16)
+    ledLookup = iterateI ((.|. 1) . (.<<. 1)) 0
+    led = (ledLookup !!) . (bitCoerce :: Unsigned 4 -> Index 16) <$> bStackSize
     bStackControlsAction = (,,) <$> btnPush <*> btnPop <*> bmWIPValue ## \case
       (1, False, Just value) -> Just $ StackPush value
       (0, True, _) -> Just StackPop
@@ -134,10 +136,6 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
     (bmTopOfStack, bStackSize, bStackResult) = unbundle $ stack $ delay Nothing bmArithmeticStackAction <||> bStackControlsAction
 
     bOledData = oled $ bmWIPValue <||> bmTopOfStack
-
-counter = flip mealy 0 $ \cases
-  n 1 -> (n + 1, n + 1)
-  n 0 -> (n, n)
 
 data StackAction = StackPush CalcValue | StackPop
   deriving (Eq, Ord, Show, Generic, NFDataX)
