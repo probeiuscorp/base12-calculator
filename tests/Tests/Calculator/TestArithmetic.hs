@@ -63,11 +63,11 @@ tests = testGroup "arithmetic"
       ArithDiv -> "÷"
     arithmeticCase op a b = snapshot @C.System "arithmetic" (unwords [show a, prettyPrintOp op, show b]) 120 $
       let
-        bmAction = fromEdges Nothing [(6, Just op), (7, Nothing)]
-        (bmError, bmResult) = arithmetic (pure $ Just a) (pure $ Just b) bmAction
+        bmAction = fromEdges Nothing [(6, Just (op, a, b)), (7, Nothing)]
+        bmResult = arithmetic bmAction
       in
-        [ raw "action" $ bmAction ## maybe ('-' <$ show ArithSum) show
-        , col "err" bmError
+        [ raw "action" $ bmAction ## maybe ('-' <$ show ArithSum) (show . (\(act, _, _) -> act))
+        , col "err" $ pure False
         , raw "result" $ printMaybeCalcValue <$> bmResult
         ]
     arithmeticCases = testGroup "arithmetic"

@@ -48,6 +48,11 @@ infixr 6 $:
 infixr 6 $$$:
 (??) = flip fromMaybe
 
+dupe :: a -> (a, a)
+dupe a = (a, a)
+swap :: (a, b) -> (b, a)
+swap (a, b) = (b, a)
+
 withNoop :: (s -> i -> s) -> (s -> Maybe i -> s)
 withNoop transfer s = \case
   Just i -> transfer s i

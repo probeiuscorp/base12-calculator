@@ -11,6 +11,7 @@ import Calculator.Prelude
 import OLED (oled)
 import Keypad (keypad)
 import Clash.Sized.Vector.ToTuple (VecToTuple(vecToTuple))
+import Arithmetic (arithmetic, ArithmeticAction(..))
 
 topEntity
   :: Clock DomMain
@@ -74,6 +75,33 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
       then ma <|> Just (bitCoerce i)
       else ma) Nothing . unpack <$> bDigits
 
+    bmArithmeticAction = (mWhen ArithSum . bitToBool <$> btnL)
+      <||> (mWhen ArithSub . bitToBool <$> btnR)
+      <||> (mWhen ArithMul . bitToBool <$> btnU)
+      <||> (mWhen ArithDiv . bitToBool <$> btnC)
+    bmrStackYielded = bStackResult ## \case
+      StackYield value -> Just $ Right value
+      StackOverUnderflow _ -> Just $ Left ()
+      StackIdle -> Nothing
+    (bmError, bmArithmeticPullStackAction, bmArithmeticStart) = inlineMealyB Nothing (bmArithmeticAction, bStackSize, bmrStackYielded) $
+      \s (mArithmeticAction, stackSize, mrStackYielded) -> let
+        idle = (s, (Nothing, Nothing, Nothing))
+        in case s of
+          Nothing -> case mArithmeticAction of
+            Nothing -> idle
+            Just act | stackSize >= 2 -> (Just (act, Nothing), (Nothing, Just StackPop, Nothing))
+            _ -> (Nothing, (Just (), Nothing, Nothing))
+          Just (act, Nothing) -> case mrStackYielded of
+            Nothing -> idle
+            Just r1 -> (Just (act, Just r1), (Nothing, Just StackPop, Nothing))
+          Just (act, Just r1) -> case mrStackYielded of
+            Nothing -> idle
+            Just r2 -> (Nothing,) $ case (r1, r2) of
+              (Right v1, Right v2) -> (Nothing, Nothing, Just (act, v1, v2))
+              _ -> (Just (), Nothing, Nothing)
+    bmArithmeticComputed = arithmetic bmArithmeticStart
+    bmArithmeticStackAction = bmArithmeticPullStackAction <||> StackPush $$$: bmArithmeticComputed
+
     bBackspace, bPush, bNegate, bReciprocal :: Signal DomMain Bool
     (bBackspace, bPush, bNegate, bReciprocal) = vecToTuple $ traverse bitCoerce bButtonsRow
     bWIPAction = WIPDigit $$$: bDigit
@@ -99,18 +127,19 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
           mul12 n = n .<<. 3 + n .<<. 2
 
     led = zeroExtend <$> bStackSize
-    bStateAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
-      (1, False, value) -> StackPush value
-      (0, True, _) -> StackPop
-      _ -> StackAck
-    (bmTopOfStack, bStackSize, bStackResult) = unbundle $ stack bStateAction
+    bStackControlsAction = (,,) <$> btnPush <*> btnPop <*> bWIPValue ## \case
+      (1, False, value) -> Just $ StackPush value
+      (0, True, _) -> Just StackPop
+      _ -> Nothing
+    (bmTopOfStack, bStackSize, bStackResult) = unbundle $ stack $ delay Nothing bmArithmeticStackAction <||> bStackControlsAction
+
     bOledData = oled $ Just <$> bWIPValue
 
 counter = flip mealy 0 $ \cases
   n 1 -> (n + 1, n + 1)
   n 0 -> (n, n)
 
-data StackAction = StackPush CalcValue | StackPop | StackAck
+data StackAction = StackPush CalcValue | StackPop
   deriving (Eq, Ord, Show, Generic, NFDataX)
 data StackResult = StackIdle | StackYield CalcValue | StackOverUnderflow Bool
   deriving (Eq, Ord, Show, Generic, NFDataX)
@@ -118,15 +147,19 @@ data StackState = StackState
   { stackTop :: Unsigned 4
   , stackItems :: Vec 16 CalcValue
   } deriving (Eq, Ord, Show, Generic, NFDataX)
-stackMachine :: StackState -> StackAction -> (StackState, (Maybe CalcValue, Unsigned 4, StackResult))
+stackMachine :: StackState -> Maybe StackAction -> (StackState, (Maybe CalcValue, Unsigned 4, StackResult))
 stackMachine state@(StackState top items) = let
-    ok (transferred@(StackState top' items'), result) = (transferred, (head items' `mWhen` (top' > 0), top', result))
+    ok (transferred@(StackState top' items'), result) = (transferred,
+      ( head items' `mWhen` (top' > 0)
+      , top'
+      , result
+      ))
   in ok . \case
-    StackPush value -> if top == 16
+    Just (StackPush value) -> if top == 15
       then (state, StackOverUnderflow True)
       else (StackState (top + 1) (replace top value items), StackIdle)
-    StackPop -> if top == 0
+    Just StackPop -> if top == 0
       then (state, StackOverUnderflow False)
       else let i = top - 1 in (StackState i items, StackYield $ items !! i)
-    StackAck -> (state, StackIdle)
+    Nothing -> (state, StackIdle)
 stack = mealy stackMachine $ StackState 0 $ repeat calcValueZero

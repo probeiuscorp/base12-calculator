@@ -17,12 +17,16 @@ data ArithmeticState
 
 arithmetic
   :: HiddenClockResetEnable dom
-  => Signal dom (Maybe CalcValue)
-  -> Signal dom (Maybe CalcValue)
-  -> Signal dom (Maybe ArithmeticAction)
-  -> (Signal dom Bool, Signal dom (Maybe CalcValue))  -- ^ raised to True when not enough values
-arithmetic bma bmb bmAction = (bError, simplify bmOutput)
+  => HS.Handshake dom (ArithmeticAction, CalcValue, CalcValue) CalcValue
+arithmetic = fmap (fmap transfer) >>> simplify
   where
+    transfer (act, asSigned -> (an, ad), asSigned -> (bn, bd)) =
+      asUnsigned $ case act of
+        ArithSum -> (an * bd + bn * ad, ad * bd)
+        ArithSub -> (an * bd - bn * ad, ad * bd)
+        ArithMul -> (an * bn, ad * bd)
+        ArithDiv -> (an * bd, bn * ad)
+
     asSigned :: CalcValue -> (Signed NCalcValueBits, Signed NCalcValueBits)
     asSigned CalcValue{..} = ((if valIsNegative then negate else id) $ bitCoerce valNumerator, bitCoerce valDenominator)
     toSignMagnitude :: Signed NCalcValueBits -> (Bool, Unsigned NCalcValueBits)
@@ -32,17 +36,6 @@ arithmetic bma bmb bmAction = (bError, simplify bmOutput)
     asUnsigned :: (Signed NCalcValueBits, Signed NCalcValueBits) -> CalcValue
     asUnsigned (toSignMagnitude -> (nSign, numerator), toSignMagnitude -> (dSign, denominator)) =
       CalcValue (nSign /= dSign) numerator denominator
-
-    (bError, bmOutput) = unbundle $ bundle (bmAction, bma, bmb) ## \case
-      (Nothing, _, _) -> (False, Nothing)
-      (Just act, Just (asSigned -> (an, ad)), Just (asSigned -> (bn, bd))) -> let
-        value = asUnsigned $ case act of
-          ArithSum -> (an * bd + bn * ad, ad * bd)
-          ArithSub -> (an * bd - bn * ad, ad * bd)
-          ArithMul -> (an * bn, ad * bd)
-          ArithDiv -> (an * bd, bn * ad)
-        in (False, Just value)
-      (Just _, _, _) -> (True, Nothing)
 
 simplify
   :: (KnownDomain dom, HiddenClockResetEnable dom)
