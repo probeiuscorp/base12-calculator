@@ -75,10 +75,10 @@ accum sw btnL btnC btnR btnU btnD bRow = (bOledData, led, pure 0, bCol)
       then ma <|> Just (bitCoerce i)
       else ma) Nothing . unpack <$> bDigits
 
-    bmArithmeticAction = (mWhen ArithSum . bitToBool <$> btnL)
-      <||> (mWhen ArithSub . bitToBool <$> btnR)
-      <||> (mWhen ArithMul . bitToBool <$> btnU)
-      <||> (mWhen ArithDiv . bitToBool <$> btnC)
+    bmArithmeticAction = (mWhen ArithSum . bitToBool <$> debounce btnL)
+      <||> (mWhen ArithSub . bitToBool <$> debounce btnR)
+      <||> (mWhen ArithMul . bitToBool <$> debounce btnU)
+      <||> (mWhen ArithDiv . bitToBool <$> debounce btnC)
     bmrStackYielded = bStackResult ## \case
       StackYield value -> Just $ Right value
       StackOverUnderflow _ -> Just $ Left ()
