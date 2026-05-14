@@ -79,6 +79,7 @@ transfer state (mValue, isReady) = case step state of
           , waiting = False
           , readyRow = asciiFromScratchSpace $ bcdScratchSpace $ bcdStepState bcd
           , printValue = workingValue bcd
+          , leadingZeroFound = False
           }
         }, defaultResult)
   Print printState -> transferPrint isReady state printState
@@ -133,15 +134,17 @@ data PrintState = PrintState
   , iPrintCol :: Index NBCDDigits
   , readyRow :: ReadyRow
   , waiting :: Bool
+  , leadingZeroFound :: Bool
   } deriving (Eq, Ord, Show, Generic, NFDataX)
 transferPrint :: Bool -> OLEDState -> PrintState -> (OLEDState, OLEDResult)
 transferPrint isReady state printState@PrintState{..} = (, result) $ case (waiting, isReady) of
   (False, _) -> state { step = Print printState { waiting = True } }
   (True, False) -> state
   -- TODO: snatToNum (SNat :: SNat NBCDDigits) doesn't seem to work here
-  (True, True) -> if iPrintCol < 10
+  (True, True) -> if not isLastDigit
     then state { step = Print printState
       { iPrintCol = iPrintCol + 1
+      , leadingZeroFound = leadingZeroFound'
       , waiting = False
       }
     }
@@ -158,10 +161,16 @@ transferPrint isReady state printState@PrintState{..} = (, result) $ case (waiti
         , step = Collect
         }
   where
+    isLastDigit = iPrintCol == 10
+    char = readyRow !! iPrintCol
+    leadingZeroFound' = leadingZeroFound || char /= 48
+    showNegative = isWorkingOnNumerator state && not leadingZeroFound' && valIsNegative printValue && (readyRow !! (iPrintCol + 1)) /= 48
     result :: OLEDResult
     result = defaultResult
-      { showChar = boolToBit isReady
-      , charValue = readyRow !! iPrintCol
+      { showChar = boolToBit $ isReady && (isLastDigit || leadingZeroFound' || showNegative)
+      , charValue = if showNegative
+        then 45
+        else char
       , rowIndex = if isWorkingOnNumerator state then 0 else 1
       , colIndex = bitCoerce (zeroExtend iPrintCol :: Index 16)
       }

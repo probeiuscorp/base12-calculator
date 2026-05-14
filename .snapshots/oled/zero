@@ -53,10 +53,10 @@ clk   ready   state   show char   clear   char          row    col
  51   0b1     print   0b0         0b0     0b0011_0000   0b00   0b0111
  52   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1000
  53   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1000
- 54   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
- 55   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
- 56   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
- 57   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
+ 54   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1001
+ 55   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1001
+ 56   0b1     print   0b1         0b0     0b0011_0000   0b00   0b1010
+ 57   0b1     print   0b1         0b0     0b0011_0000   0b00   0b1010
  58   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  59   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
  60   0b1     bcd     0b0         0b0     0b0000_0000   0b00   0b0000
@@ -108,10 +108,10 @@ clk   ready   state   show char   clear   char          row    col
 106   0b1     print   0b0         0b0     0b0011_0000   0b01   0b0111
 107   0b1     print   0b0         0b0     0b0011_0000   0b01   0b1000
 108   0b1     print   0b0         0b0     0b0011_0000   0b01   0b1000
-109   0b1     print   0b1         0b0     0b0011_0010   0b01   0b1001
-110   0b1     print   0b1         0b0     0b0011_0010   0b01   0b1001
-111   0b1     print   0b1         0b0     0b0011_0110   0b01   0b1010
-112   0b1     print   0b1         0b0     0b0011_0110   0b01   0b1010
+109   0b1     print   0b0         0b0     0b0011_0000   0b01   0b1001
+110   0b1     print   0b0         0b0     0b0011_0000   0b01   0b1001
+111   0b1     print   0b1         0b0     0b0011_0001   0b01   0b1010
+112   0b1     print   0b1         0b0     0b0011_0001   0b01   0b1010
 113   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000
 114   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000
 115   0b1     ready   0b0         0b0     0b0000_0000   0b00   0b0000

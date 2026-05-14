@@ -12,6 +12,9 @@ tests :: TestTree
 tests = let test = snapshot @C.System "oled" in testGroup "oled"
   -- TODO: rename test to basic
   [ test "test" 128 $ oledCols $ pure $ Just $ CalcValue False 20 30
+  , test "negative single digit" 128 $ oledCols $ pure $ Just $ CalcValue True 1 1
+  , test "negative" 128 $ oledCols $ pure $ Just $ CalcValue True 20 30
+  , test "zero" 128 $ oledCols $ pure $ Just $ CalcValue False 0 1
   , test "switching value" 256 $ oledCols $ fromEdges Nothing
     [ (10, Just $ CalcValue False 20 30)
     , (138, Just $ CalcValue False 24 155)

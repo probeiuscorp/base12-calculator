@@ -51,8 +51,8 @@ clk   ready   state   show char   clear   char          row    col
  49   0b1     print   0b0         0b0     0b0011_0000   0b00   0b0110
  50   0b1     print   0b0         0b0     0b0011_0000   0b00   0b0111
  51   0b1     print   0b0         0b0     0b0011_0000   0b00   0b0111
- 52   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1000
- 53   0b1     print   0b0         0b0     0b0011_0000   0b00   0b1000
+ 52   0b1     print   0b1         0b0     0b0010_1101   0b00   0b1000
+ 53   0b1     print   0b1         0b0     0b0010_1101   0b00   0b1000
  54   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
  55   0b1     print   0b1         0b0     0b0011_0001   0b00   0b1001
  56   0b1     print   0b1         0b0     0b0011_1000   0b00   0b1010
