@@ -148,7 +148,7 @@ data StackState = StackState
 stackMachine :: StackState -> Maybe StackAction -> (StackState, (Maybe CalcValue, Unsigned 4, StackResult))
 stackMachine state@(StackState top items) = let
     ok (transferred@(StackState top' items'), result) = (transferred,
-      ( head items' `mWhen` (top' > 0)
+      ( items' !! (top' - 1) `mWhen` (top' > 0)
       , top'
       , result
       ))
